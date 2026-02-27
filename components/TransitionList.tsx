@@ -1,102 +1,217 @@
-import { expenseCategories } from '@/constants/data'
-import { TransactionItemProps, TransactionListType } from '@/types'
-import { scale, verticalScale } from '@/utils/styling'
-import { FontAwesome } from '@expo/vector-icons'
-import React from 'react'
-import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native'
-import Animated, { FadeInDown } from 'react-native-reanimated'
-import Loading from './Loading'
-import Typo from './Typo'
+import { Colors } from "@/constants/colors";
+import { findCategoryInCatalog } from "@/constants/icons";
+import {
+  TransactionItemProps,
+  TransactionListType,
+  TransactionType,
+} from "@/types";
+import { scale, verticalScale } from "@/utils/styling";
+import { FlashList } from "@shopify/flash-list";
+import { router } from "expo-router";
+import React from "react";
+import {
+  StyleSheet,
+  TouchableOpacity,
+  useColorScheme,
+  View,
+} from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import Loading from "./Loading";
+import Typo from "./Typo";
 
-export default function TransitionList({data, title, loading, emptyListMessage}: TransactionListType) {
-    const handleClick = () => {
+export default function TransitionList({
+  data,
+  title,
+  loading,
+  emptyListMessage,
+}: TransactionListType) {
+  const handleClick = (item: TransactionType) => {
+    router.push({
+      pathname: "/(modals)/transactionModel",
+      params: {
+        /* seus params aqui... */
+        ...item,
+        amount: item.amount.toString(),
+        date:
+          typeof item.date === "string" ? item.date : item.date.toISOString(),
+      },
+    });
+  };
 
-    }
   return (
     <View style={styles.container}>
-      {
-        title && (
-            <Typo size={20} fontWeight={'500'}>{title}</Typo>
-        )
-      }
+      {title && (
+        <View style={styles.headerRow}>
+          <Typo size={19} fontWeight={"700"}>
+            {title}
+          </Typo>
+          <TouchableOpacity>
+            <Typo size={14} color={Colors.primary} fontWeight={"600"}>
+              Ver tudo
+            </Typo>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.list}>
-        {/* Install FhashList */}
-        <FlatList data={data} renderItem={({item, index}) => <TransactionItem item={item} index={index} handleClick={handleClick} />} />
-
+        <FlashList<TransactionType>
+          data={data}
+          keyExtractor={(item, index) =>
+            item.id?.toString() ?? index.toString()
+          }
+          renderItem={({ item, index }) => (
+            <TransactionItem
+              item={item}
+              index={index}
+              handleClick={handleClick}
+            />
+          )}
+        />
       </View>
-      {
-        !loading && data.length == 0 && (
-            <Typo size={15} color='#999' style={{textAlign: 'center', marginTop: verticalScale(15)}}>{emptyListMessage}</Typo>
-        )
-      }
 
-      {
-        loading && (
-            <View style={{top: verticalScale(100)}}>
-                <Loading />
-            </View>
-        )
-      }
+      {!loading && data.length === 0 && (
+        <View style={styles.emptyContainer}>
+          <Typo size={15} color="#888">
+            {emptyListMessage}
+          </Typo>
+        </View>
+      )}
+
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <Loading />
+        </View>
+      )}
     </View>
-  )
+  );
 }
 
-export const TransactionItem = ({item, index, handleClick}: TransactionItemProps) => {
-    let category = expenseCategories['rent']
-    const IconComponent = category.icon
-    return <Animated.View entering={FadeInDown.delay(index * 50).springify().damping(6)}>
-        <TouchableOpacity style={styles.row} onPress={() => handleClick(item)}>
-            <View style={[styles.icon, {backgroundColor: category.bgColor}]}>
-                {IconComponent && (
-                    <FontAwesome name={IconComponent} size={verticalScale(25)} color={'#fff'}/>
-                )}
-            </View>
-            <View style={styles.categoryDes}>
-                <Typo size={16}>{category.label}</Typo>
-                <Typo size={12} color='#aaa' textProps={{numberOfLines: 1}}>{item?.description || "Paid"}</Typo>
-            </View>
-            <View style={styles.amountDate}>
-                <Typo fontWeight={'500'} color='#f00'>- 123 KZ</Typo>
-                <Typo size={12} color='#aaa'>12 jan</Typo>
-            </View>
-        </TouchableOpacity>
+export const TransactionItem = ({
+  item,
+  index,
+  handleClick,
+}: TransactionItemProps) => {
+  const colorSchema = useColorScheme();
+  const themeColors = Colors[colorSchema!] ?? Colors.dark;
+
+  // Busca o ícone e o nome de exibição no catálogo baseado no item.category (que guarda o 'name')
+  const categoryInfo = React.useMemo(() => {
+    // Garante que o tipo seja passado corretamente
+    const type = item.type === "income" ? "income" : "expense";
+    return findCategoryInCatalog(item.category || "", type);
+  }, [item.category, item.type]);
+
+  // Renomeia para letra maiúscula para o React entender como Componente
+  const IconComponent = categoryInfo.comp;
+
+  // Formatação de data e valor
+  const date = item?.date
+    ? new Date(item.date).toLocaleDateString("pt-AO", {
+        day: "numeric",
+        month: "short",
+      })
+    : "";
+  const formattedAmount = Number(item.amount).toLocaleString("pt-AO", {
+    minimumFractionDigits: 2,
+  });
+
+  // Cor de destaque (Pode vir do DB ou ser fixa por tipo)
+  const brandColor = item.type === "income" ? "#10b981" : "#ef4444";
+
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(index * 50)
+        .springify()
+        .damping(15)}
+    >
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={[styles.row, { backgroundColor: themeColors.uiBackground }]}
+        onPress={() => handleClick(item)}
+      >
+        {/* ÍCONE DINÂMICO DO PHOSPHOR */}
+        <View style={[styles.icon, { backgroundColor: brandColor + "15" }]}>
+          <IconComponent
+            size={verticalScale(22)}
+            color={brandColor}
+            weight="fill"
+          />
+        </View>
+
+        <View style={styles.categoryDes}>
+          <Typo size={16} fontWeight="600">
+            {categoryInfo.displayName}
+          </Typo>
+          <Typo size={13} color="#888" textProps={{ numberOfLines: 1 }}>
+            {item?.description || "Sem descrição"}
+          </Typo>
+        </View>
+
+        <View style={styles.amountDate}>
+          <Typo fontWeight={"700"} size={15} color={brandColor}>
+            {item?.type === "income" ? "+ " : "- "}
+            {formattedAmount}
+          </Typo>
+          <Typo size={12} color="#999">
+            {date}
+          </Typo>
+        </View>
+      </TouchableOpacity>
     </Animated.View>
-}
-
+  );
+};
 
 const styles = StyleSheet.create({
-    container: {
-        gap: verticalScale(17)
-    },
-    list: {
-        minHeight: 3
-    },
-    row: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: scale(12),
-        marginBottom: verticalScale(12),
-
-        backgroundColor: '#222',
-        padding: verticalScale(10),
-        paddingHorizontal: verticalScale(10),
-        borderRadius: verticalScale(17)
-    },
-    icon: {
-        height: verticalScale(44),
-        aspectRatio: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: verticalScale(12),
-        borderCurve: 'continuous'
-    },
-    categoryDes: {
-        flex: 1,
-        gap: 2.5
-    },
-    amountDate: {
-        alignItems: 'flex-end',
-        gap: 3
-    }
-})
+  container: {
+    paddingTop: verticalScale(20),
+    flex: 1,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: verticalScale(15),
+  },
+  list: {
+    flex: 1,
+    minHeight: 100,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: verticalScale(12),
+    borderRadius: 20,
+    marginBottom: verticalScale(10),
+    // Sombra leve para efeito de card
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  icon: {
+    height: verticalScale(48),
+    width: verticalScale(48),
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 15,
+  },
+  categoryDes: {
+    flex: 1,
+    marginLeft: scale(12),
+    gap: 2,
+  },
+  amountDate: {
+    alignItems: "flex-end",
+    gap: 2,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 40,
+  },
+  loadingContainer: {
+    marginTop: 40,
+    alignItems: "center",
+  },
+});

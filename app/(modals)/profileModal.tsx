@@ -4,137 +4,207 @@ import Header from "@/components/Header";
 import Input from "@/components/Input";
 import ModalWrapper from "@/components/ModalWrapper";
 import Typo from "@/components/Typo";
+import { Colors } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthProvider";
+import * as schema from "@/db/schema";
 import { getProfileImage } from "@/services/imageService";
 import { updateUser } from "@/services/userService";
 import { UserDataType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
-import { FontAwesome } from "@expo/vector-icons";
+import { FontAwesome6 } from "@expo/vector-icons"; // FontAwesome6 para ícones mais finos
+import { drizzle } from "drizzle-orm/expo-sqlite";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
 import React, { useEffect, useState } from "react";
-import { Alert, ScrollView, TouchableOpacity, View } from "react-native";
-export default function profileModal() {
-  const {user, updateUserData }=useAuth()
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+export default function ProfileModal() {
+  const { user, updateUserData, setUser } = useAuth();
   const [userData, setUserData] = useState<UserDataType>({
     name: "",
     image: null,
   });
   const [loading, setLoading] = useState(false);
-  const router = useRouter()
+  const router = useRouter();
+  const db = useSQLiteContext();
+  const drizzleDb = drizzle(db, { schema });
 
   useEffect(() => {
     setUserData({
       name: user?.name || "",
-      image: user?.image || null
-    })
-  }, [])
+      image: user?.image || null,
+    });
+  }, [user]);
 
   const onPickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.5
-    })
+      aspect: [1, 1], // Foto de perfil deve ser quadrada
+      quality: 0.5,
+    });
 
-    if (!result.canceled) setUserData({...userData, image: result.assets[0].uri})
-  }
+    if (!result.canceled)
+      setUserData({ ...userData, image: result.assets[0].uri });
+  };
 
   const onSubmit = async () => {
-    let { name, image } = userData;
+    let { name } = userData;
     if (!name.trim()) {
-      Alert.alert("Usuário", "Por favor Preencha todos os campos");
-      return
+      Alert.alert("Erro", "O nome não pode estar vazio.");
+      return;
     }
-    setLoading(true)
-    
-    const res = await updateUser(user?.uid as string, userData)
-    setLoading(false)
+    setLoading(true);
+
+    const res = await updateUser(drizzleDb, user?.uid as string, {
+      ...userData,
+      name: name.trim(),
+    });
+
     if (res.success) {
-      updateUserData(user?.uid as string)
-      router.back()
+      setUser(userData);
+      // updateUserData(drizzleDb, user?.uid as string);
+      router.replace("/(tabs)/profile");
     } else {
-      Alert.alert("Usuário", res.msg)
+      setLoading(false);
+      Alert.alert("Erro", res.msg);
     }
   };
 
   return (
     <ModalWrapper>
-      <View
-        style={{ paddingHorizontal: verticalScale(20) }}
-        className="flex-1 justify-between"
-      >
+      <View style={styles.container}>
         <Header
           title="Actualizar Perfil"
           leftIcon={<BackButton />}
-          style={{ marginBottom: verticalScale(10) }}
+          style={{ marginBottom: verticalScale(20) }}
         />
 
         <ScrollView
-          contentContainerStyle={{
-            gap: verticalScale(30),
-            marginTop: verticalScale(15),
-          }}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <View className="relative self-center">
-            <Image
-              style={{ height: verticalScale(135), width: verticalScale(135) }}
-              className="self-center bg-neutral-300 rounded-[200px] border border-neutral-500"
-              source={getProfileImage(userData.image)}
-              transition={100}
-              contentFit="cover"
-            />
-
-            <TouchableOpacity onPress={onPickImage}
-              style={{
-                bottom: verticalScale(5),
-                right: verticalScale(7),
-                shadowColor: "000",
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.25,
-                shadowRadius: 10,
-                elevation: 4,
-                padding: verticalScale(7),
-              }}
-              className="bg-neutral-100 rounded-[100px] absolute"
-            >
-              <FontAwesome
-                name="pencil"
-                size={verticalScale(20)}
-                color={"aaa"}
+          {/* Secção da Imagem de Perfil */}
+          <View style={styles.imageSection}>
+            <View style={styles.avatarContainer}>
+              <Image
+                style={styles.avatar}
+                source={getProfileImage(userData.image)}
+                transition={200}
+                contentFit="cover"
               />
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={onPickImage}
+                activeOpacity={0.8}
+                style={styles.editButton}
+              >
+                <FontAwesome6 name="camera" size={scale(18)} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <Typo size={14} color="#888">
+              Toca na câmara para mudar a foto
+            </Typo>
           </View>
 
-          <View style={{ gap: verticalScale(10) }}>
-            <Typo color={"#444"}>Nome</Typo>
-            <Input
-              placeholder="Nome"
-              value={userData.name}
-              onChangeText={(value) =>
-                setUserData({ ...userData, name: value })
-              }
-            />
+          {/* Secção do Formulário */}
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Typo size={16} fontWeight="600">
+                Nome Completo
+              </Typo>
+              <Input
+                placeholder="Ex: Manuel Silva"
+                value={userData.name}
+                onChangeText={(value) =>
+                  setUserData({ ...userData, name: value })
+                }
+              />
+            </View>
+
+            <Typo size={13} color="#555" style={{ textAlign: "center" }}>
+              Esta informação será visível nos teus relatórios e extratos.
+            </Typo>
           </View>
         </ScrollView>
       </View>
-      <View
-        style={{
-          paddingHorizontal: scale(20),
-          paddingTop: verticalScale(15),
-          marginBottom: verticalScale(55),
-          gap: scale(12),
-        }}
-        className="items-center flex-row justify-center border-t-neutral-700 border-t"
-      >
-        <Button onPress={onSubmit} loading={loading} style={{flex: 1}} >
-          <Typo color="#000" fontWeight={"700"}>
-            Actualizar
+
+      {/* Botão de Acção Fixo no Rodapé */}
+      <View style={styles.footer}>
+        <Button
+          onPress={onSubmit}
+          loading={loading}
+          style={styles.submitButton}
+        >
+          <Typo fontWeight="700" color="#fff" size={16}>
+            Guardar Alterações
           </Typo>
         </Button>
       </View>
     </ModalWrapper>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: scale(20),
+  },
+  scrollContent: {
+    paddingBottom: verticalScale(30),
+  },
+  imageSection: {
+    alignItems: "center",
+    gap: verticalScale(15),
+    marginVertical: verticalScale(20),
+  },
+  avatarContainer: {
+    position: "relative",
+  },
+  avatar: {
+    height: verticalScale(140),
+    width: verticalScale(140),
+    borderRadius: 70,
+    backgroundColor: "#262626",
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  editButton: {
+    position: "absolute",
+    bottom: 5,
+    right: 5,
+    backgroundColor: Colors.primary,
+    height: scale(40),
+    width: scale(40),
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 4,
+    borderColor: "#1A1A1A",
+  },
+  form: {
+    gap: verticalScale(20),
+    marginTop: verticalScale(10),
+  },
+  inputGroup: {
+    gap: verticalScale(10),
+  },
+  footer: {
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(15),
+    paddingBottom: verticalScale(30),
+    borderTopWidth: 1,
+    borderTopColor: "#262626",
+  },
+  submitButton: {
+    height: verticalScale(54),
+    borderRadius: 16,
+  },
+});

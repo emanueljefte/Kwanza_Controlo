@@ -1,17 +1,31 @@
-import { ScreenWrapperProps } from '@/types'
-import React from 'react'
-import { Dimensions, Platform, StatusBar, View } from 'react-native'
+import { Colors } from "@/constants/colors";
+import { useTheme } from "@/contexts/ThemeContext";
+import { ScreenWrapperProps } from "@/types";
+import { StatusBar } from "expo-status-bar";
+import React from "react";
+import { Dimensions, Platform, View } from "react-native";
+const { height } = Dimensions.get("window");
 
-const {height} = Dimensions.get("window")
+const ScreenWrapper = ({ style, children }: ScreenWrapperProps) => {
+  const { theme, mode, setMode } = useTheme();
+  const activeColors = Colors[theme];
+  let paddingVertical = Platform.OS == "ios" ? height * 0.06 : 30;
 
-const ScreenWrapper = ({style, children}: ScreenWrapperProps) => {
-   let paddingTop = Platform.OS == "ios" ? height * 0.06 : 30;
-    return (
-    <View className={`pt-[${paddingTop}] flex-1 bg-neutral-900`} style={[style, {paddingTop}]}>
-      <StatusBar barStyle={'light-content'} backgroundColor={'#171717'} />
+  return (
+    <View
+      className={`flex-1`}
+      style={[
+        style,
+        {
+          paddingVertical,
+          backgroundColor: activeColors.background,
+        },
+      ]}
+    >
+      <StatusBar style={theme === "dark" ? "light" : "dark"} />
       {children}
     </View>
-  )
-}
+  );
+};
 
-export default ScreenWrapper
+export default ScreenWrapper;

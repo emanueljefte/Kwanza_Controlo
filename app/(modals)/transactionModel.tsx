@@ -5,31 +5,39 @@ import ImageUpload from "@/components/ImageUpload";
 import Input from "@/components/Input";
 import ModalWrapper from "@/components/ModalWrapper";
 import Typo from "@/components/Typo";
+import { Colors } from "@/constants/colors";
+import { transactionType } from "@/constants/data";
+import { ICON_CATALOG, INCOME_CATALOG } from "@/constants/icons";
 import { useAuth } from "@/contexts/AuthProvider";
+import * as schema from "@/db/schema";
 import useFetchData from "@/hooks/useFetchData";
-import { deleteWallet } from "@/services/walletService";
+import {
+  createOrUpdateTransaction,
+  deleteTransaction,
+} from "@/services/transictionService";
 import { TransactionType, WalletType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
-import { FontAwesome } from "@expo/vector-icons";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
+import { drizzle } from "drizzle-orm/expo-sqlite";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { Dropdown } from "react-native-element-dropdown";
-
-import { expenseCategories } from "@/constants/data";
-import React, { useCallback, useState } from "react";
+import * as SecureStore from "expo-secure-store";
+import { useSQLiteContext } from "expo-sqlite";
+import * as Icons from "phosphor-react-native";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  useColorScheme,
   View,
 } from "react-native";
+import { Dropdown } from "react-native-element-dropdown";
 
-export default function transactionnsactionModel() {
+export default function TransactionModel() {
   const { user } = useAuth();
   const [transaction, setTransaction] = useState<TransactionType>({
     type: "expense",
@@ -37,19 +45,30 @@ export default function transactionnsactionModel() {
     description: "",
     category: "",
     date: new Date(),
-    walletId: "",
+    walletId: 0,
     image: null,
   });
+  const colorSchema = useColorScheme();
+  const theme = Colors[colorSchema!] ?? Colors.dark;
+  const isExpense = transaction.type === "expense";
+  const accentColor = isExpense ? "#ef4444" : "#10b981"; // Vermelho vs Verde
   const [loading, setLoading] = useState(false);
-  const [isFocus, setIsFocus] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const router = useRouter();
+  const [category, setCategory] = useState({
+    name: "",
+    displayName: "",
+    comp: "",
+  });
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const db = useSQLiteContext();
+  const drizzleDb = drizzle(db, { schema });
 
   useFocusEffect(
     useCallback(() => {
       setRefreshKey((prev) => prev + 1);
-    }, [])
+    }, []),
   );
 
   const {
@@ -59,54 +78,113 @@ export default function transactionnsactionModel() {
   } = useFetchData<WalletType>(
     "wallets",
     { uid: user?.uid as string, orderBy: "created", sort: "desc" },
-    refreshKey
+    refreshKey,
   );
 
-  const oldTransaction: { name: string; image: string; id: string } =
-    useLocalSearchParams();
+  const oldTransaction: {
+    type: string;
+    amount: string;
+    category?: string;
+    date: string;
+    description?: string;
+    user?: string;
+    walletId: string;
+    image?: any;
+    id: string;
+  } = useLocalSearchParams();
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate: Date) => {
     const currentDate = selectedDate || transaction.date;
     setTransaction({ ...transaction, date: currentDate });
     setShowDatePicker(Platform.OS == "ios" ? true : false);
   };
-  //   useEffect(() => {
+  useEffect(() => {
+    if (oldTransaction?.id) {
+      setTransaction({
+        type: oldTransaction?.type,
+        amount: Number(oldTransaction?.amount),
+        category: oldTransaction?.category || "",
+        date: new Date(oldTransaction?.date),
+        description: oldTransaction?.description || "",
+        image: oldTransaction?.image,
+        user: oldTransaction?.user,
+        walletId: Number(oldTransaction?.walletId),
+      });
+    }
+    SecureStore.deleteItemAsync("category");
+  }, []);
 
-  //     if (oldTransaction?.id) {
-  //       setTransaction({
-  //         name: oldTransaction?.name,
-  //         image: oldTransaction?.image
-  //       })
+  useEffect(() => {
+    async function searchCategory() {
+      const dados = await SecureStore.getItemAsync("category");
+      if (dados) {
+        const parsed = JSON.parse(dados);
+        // Aqui garantimos que o nome exibido é o 'displayName' vindo do modal de categorias
+        setTransaction((prev) => ({ ...prev, category: parsed.displayName }));
+      } else if (!oldTransaction.category) {
+        // Se for uma nova transação e não houver nada no Store,
+        // definimos o padrão baseado no catálogo
+        setTransaction((prev) => ({
+          ...prev,
+          category: prev.type === "income" ? "Salário" : "Casa",
+        }));
+      }
+    }
+    searchCategory();
+  }, [refreshKey]);
 
-  //     }
-  //   }, [])
+  useEffect(() => {
+    // Se o tipo mudar e a categoria atual não pertencer ao catálogo do novo tipo, resetamos
+    const catalog =
+      transaction.type === "income" ? INCOME_CATALOG : ICON_CATALOG;
+    const allItems = Object.values(catalog).flat() as any[];
+    const exists = allItems.find((i) => i.displayName === transaction.category);
+
+    if (!exists) {
+      setTransaction((prev) => ({
+        ...prev,
+        category: prev.type === "income" ? "Salário" : "Outros",
+      }));
+    }
+  }, [transaction.type]);
+
   const onSubmit = async () => {
-    let { type, amount, description, category, date, walletId, image } = transaction;
+    let { type, amount, description, category, date, walletId, image } =
+      transaction;
 
-    if (!walletId || !date || !amount || (type == 'expense' && !category)) {
+    if (!walletId || !date || !amount || (type == "expense" && !category)) {
       Alert.alert("Transação", "Por favor Preencha todos os campos");
-      return
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // Define para o final do dia atual
+
+    if (new Date(date) > today) {
+      Alert.alert(
+        "Data Inválida",
+        "Não podes registar uma transação para o futuro!",
+      );
+      return;
     }
 
     const transactionData: TransactionType = {
-      type, amount, description, category, date, walletId, image, uid: user?.uid
-    }
+      type,
+      amount,
+      description,
+      category,
+      date:
+        typeof transaction.date === "string"
+          ? transaction.date
+          : transaction.date.toISOString(),
+      walletId,
+      image: image ? image : null,
+      user: user?.uid,
+    };
 
-    // if (oldTransaction?.id) data.id = oldTransaction.id
-    // setLoading(true)
-    // const res = await createOrUpdatetransaction(data)
-    // setLoading(false)
-    // if (res.success) {
-    //   router.back()
-    // } else {
-    //   Alert.alert("transaction", res.msg)
-    // }
-  };
-
-  const onDelete = async () => {
-    if (!oldTransaction?.id) return;
+    if (oldTransaction?.id) transactionData.id = Number(oldTransaction.id);
     setLoading(true);
-    const res = await deleteWallet(oldTransaction?.id);
+    const res = await createOrUpdateTransaction(drizzleDb, transactionData);
     setLoading(false);
     if (res.success) {
       router.back();
@@ -115,10 +193,26 @@ export default function transactionnsactionModel() {
     }
   };
 
+  const onDelete = async () => {
+    if (!oldTransaction?.id) return;
+    setLoading(true);
+    const res = await deleteTransaction(
+      drizzleDb,
+      Number(oldTransaction?.id),
+      Number(oldTransaction.walletId),
+    );
+    setLoading(false);
+    if (res.success) {
+      router.back();
+    } else {
+      Alert.alert("transação", res.msg);
+    }
+  };
+
   const showDeleteAlert = () => {
     Alert.alert(
       "Confirmação",
-      "Tens ceteza que pretendes realizar isto? \nEsta ação removerá todas as transações relacionadas com este cartão",
+      "Tens ceteza que pretendes eliminar esta transação?",
       [
         {
           text: "Cancelar",
@@ -130,165 +224,274 @@ export default function transactionnsactionModel() {
           onPress: () => onDelete(),
           style: "destructive",
         },
-      ]
+      ],
+    );
+  };
+
+  const getCategoryIcon = (categoryName: string | undefined, type: string) => {
+    // 1. Seleciona o catálogo
+    const catalog = type === "income" ? INCOME_CATALOG : ICON_CATALOG;
+
+    if (!categoryName) return type === "income" ? Icons.TrendUp : Icons.Tag;
+
+    // 2. Extrai todos os itens de todas as seções num único array plano
+    // Usamos 'any' aqui apenas para o flatten, para evitar o conflito de chaves do TS
+    const allItems = Object.values(catalog).flat() as any[];
+
+    // 3. Procura o item pelo displayName
+    const categoryItem = allItems.find(
+      (item) => item.displayName === categoryName,
+    );
+
+    // 4. Retorna o componente ou o fallback
+    return (
+      categoryItem?.comp || (type === "income" ? Icons.TrendUp : Icons.Tag)
     );
   };
 
   return (
     <ModalWrapper>
-      <View style={{ paddingHorizontal: verticalScale(20) }} className="flex-1">
+      <View style={styles.container}>
         <Header
-          title={oldTransaction?.id ? "Atualizar Transação" : "Nova Transação"}
+          title={oldTransaction?.id ? "Editar Registro" : "Novo Registro"}
           leftIcon={<BackButton />}
-          style={{ marginBottom: verticalScale(10) }}
         />
 
         <ScrollView
-          contentContainerStyle={{
-            gap: verticalScale(20),
-            paddingBottom: verticalScale(40),
-            paddingVertical: verticalScale(15),
-          }}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* TRANSACTION TYPE */}
-          {/* <View style={{ gap: verticalScale(10) }}>
-            <Typo color={"#bbb"} size={16}>Tipo</Typo>
-            <Dropdown style={styles.dropdownContainer} placeholderStyle={styles.dropdownPlaceholder} selectedTextStyle={styles.dropdownSelectedText} iconStyle={styles.dropdownIcon} data={TransactionType} maxHeight={300} labelField={'label'} valueField={'value'} value={transaction.type} onChange={(item) => setTransaction({...transaction, type: item.value})} itemTextStyle={styles.dropdownItemText} itemContainerStyle={styles.dropdownItemContainer} containerStyle={styles.dropdownListContainer} activeColor={'#ccc'} placeholder={!isFocus ? "Selecione o item"} />
-          </View> */}
+          {/* SEÇÃO 1: MONTANTE EM DESTAQUE */}
+          <View style={styles.amountSection}>
+            <Typo size={14} color="#888" style={{ textAlign: "center" }}>
+              Quanto?
+            </Typo>
+            <View style={styles.amountInputWrapper}>
+              <Typo size={32} fontWeight="700" color={accentColor}>
+                KZ
+              </Typo>
+              <Input
+                keyboardType="numeric"
+                value={transaction?.amount.toString()}
+                containerStyle={styles.hugeInput}
+                style={{ fontSize: 40, fontWeight: "700", color: accentColor }}
+                onChangeText={(value) =>
+                  setTransaction({
+                    ...transaction,
+                    amount: Number(value.replace(/[^0-9]/g, "")),
+                  })
+                }
+              />
+            </View>
+          </View>
 
-          {/* WALLET */}
-          {/* // <View style={{ gap: verticalScale(10) }}>
-          //   <Typo color={"#bbb"} size={16}>Carteira</Typo>
-          //   <Dropdown style={styles.dropdownContainer} placeholderStyle={styles.dropdownPlaceholder} selectedTextStyle={styles.dropdownSelectedText} iconStyle={styles.dropdownIcon} data={wallets.map(wallet => {{label: `${wallet?.name {${wallet.amount}}}`, value: wallet?.id}})} maxHeight={300} labelField={'label'} valueField={'value'} value={transaction.type} onChange={(item) => setTransaction({...transaction, walletId: item.value || ''})} itemTextStyle={styles.dropdownItemText} itemContainerStyle={styles.dropdownItemContainer} containerStyle={styles.dropdownListContainer} activeColor={'#ccc'} placeholder={"Selecione a carteira"} />
-          // </View> */}
+          {/* SEÇÃO 2: TIPO E CONTA */}
+          <View style={styles.row}>
+            <View style={{ flex: 1, gap: 8 }}>
+              <Typo size={15} fontWeight="600">
+                Fluxo
+              </Typo>
+              <Dropdown
+                style={[styles.dropdownContainer, { borderColor: accentColor }]}
+                data={transactionType}
+                labelField={"label"}
+                valueField={"value"}
+                value={transaction.type}
+                onChange={(item) =>
+                  setTransaction({ ...transaction, type: item.value })
+                }
+                selectedTextStyle={{ color: accentColor, fontWeight: "bold" }}
+              />
+            </View>
 
-          {/* CATEGORY */}
-           {
-                transaction.type === 'expense' && (
-                    <View style={{ gap: verticalScale(10) }}>
-                      <Typo color={"#bbb"} size={16}>Categoria de Despesa</Typo>
-                      <Dropdown style={styles.dropdownContainer} placeholderStyle={styles.dropdownPlaceholder} selectedTextStyle={styles.dropdownSelectedText} iconStyle={styles.dropdownIcon} data={Object.values(expenseCategories)} maxHeight={300} labelField={'label'} valueField={'value'} value={transaction.category} onChange={(item) => setTransaction({...transaction, category: item.value})} itemTextStyle={styles.dropdownItemText} itemContainerStyle={styles.dropdownItemContainer} containerStyle={styles.dropdownListContainer} activeColor={'#ccc'} placeholder={!isFocus ? "Selecione o item": ""} />
-                    </View>
-
-                )
-            } 
-
-          <View style={{ gap: verticalScale(10) }}>
-            <Typo color={"#bbb"} size={16}>Data</Typo>
-            {!showDatePicker && (
-              <Pressable
-                style={styles.dateInput}
-                onPress={() => setShowDatePicker(true)}
+            <View style={{ flex: 1, gap: 8 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
               >
-                <Typo size={14}>
-                  {(transaction.date as Date).toLocaleDateString()}
+                <Typo size={15} fontWeight="600">
+                  Carteira
                 </Typo>
-              </Pressable>
-            )}
-
-            {showDatePicker && (
-              <View style={Platform.OS == "ios" && styles.iosDatePicker}>
-                <DateTimePicker
-                  themeVariant="dark"
-                  value={transaction.date as Date}
-                  textColor={"#fff"}
-                  mode="date"
-                  display={Platform.OS == "ios" ? "spinner" : "default"}
-                  onChange={onDateChange as any}
-                />
-
-                {Platform.OS == "ios" && (
+                {!wallets?.length && (
                   <TouchableOpacity
-                    style={styles.datePickerButton}
-                    onPress={() => setShowDatePicker(false)}
+                    onPress={() => router.push("/(modals)/walletModal")}
                   >
-                    <Typo size={15} fontWeight={"500"}>
-                      Ok
+                    <Typo size={12} color={Colors.primary} fontWeight="700">
+                      + Criar
                     </Typo>
                   </TouchableOpacity>
                 )}
               </View>
-            )}
+              <Dropdown
+                style={[
+                  styles.dropdownContainer,
+                  !wallets?.length && { opacity: 0.6, borderColor: "#666" }, // Estilo visual de desabilitado
+                ]}
+                // Se não houver carteiras, mostramos uma lista com um aviso
+                data={
+                  !wallets || wallets.length === 0
+                    ? [{ label: "Nenhuma carteira encontrada", value: null }]
+                    : wallets.map((w) => ({ label: w.name, value: w.id }))
+                }
+                labelField={"label"}
+                valueField={"value"}
+                value={transaction.walletId}
+                disable={!wallets || wallets.length === 0} // Impede o clique se estiver vazio
+                placeholder={
+                  !wallets?.length ? "Crie uma carteira primeiro" : "Selecionar"
+                }
+                placeholderStyle={{
+                  color: !wallets?.length ? "#ef4444" : "#888",
+                  fontSize: 14,
+                }}
+                onChange={(item) => {
+                  if (item.value) {
+                    setTransaction({ ...transaction, walletId: item.value });
+                  }
+                }}
+              />
+
+              {/* FEEDBACK VISUAL EXTRA */}
+              {!wallets?.length && (
+                <Typo size={12} color="#ef4444" style={{ marginTop: 2 }}>
+                  * Precisas de uma carteira para registar
+                </Typo>
+              )}
+            </View>
           </View>
 
-          {/* AMOUNT */}
-          <View style={{ gap: verticalScale(10) }}>
-            <Typo color={"#bbb"} size={16}>Montante</Typo>
-            <Input
-              // placeholder="Salário"
-              keyboardType="numeric"
-              value={transaction?.amount.toString()}
-              onChangeText={(value) =>
-                setTransaction({
-                  ...transaction,
-                  amount: Number(value.replace(/[^0-9]/g, "")),
+          {/* SEÇÃO 3: CATEGORIA E DATA */}
+          <View style={styles.cardSection}>
+            {/* CATEGORIA DINÂMICA COM ÍCONE DO CATÁLOGO */}
+            <TouchableOpacity
+              style={styles.listRow}
+              onPress={() =>
+                router.push({
+                  pathname: "/(modals)/categoryModal",
+                  params: { type: transaction.type },
                 })
               }
-            />
+            >
+              {/* 1. Chamamos a função e guardamos o componente em 'CategoryIcon' */}
+              {(() => {
+                const CategoryIcon = getCategoryIcon(
+                  transaction.category,
+                  transaction.type,
+                );
+
+                // Definimos a cor baseada no tipo ou se já foi selecionado
+                const iconColor = transaction.category
+                  ? transaction.type === "income"
+                    ? "#10b981"
+                    : Colors.primary
+                  : "#666";
+
+                return (
+                  <View
+                    style={[
+                      styles.iconCircle,
+                      { backgroundColor: iconColor + "15" },
+                    ]}
+                  >
+                    {/* 2. Renderizamos como um componente normal */}
+                    <CategoryIcon size={22} weight="fill" color={iconColor} />
+                  </View>
+                );
+              })()}
+
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Typo size={12} color="#888">
+                  Categoria de{" "}
+                  {transaction.type === "income" ? "Renda" : "Despesa"}
+                </Typo>
+                <Typo
+                  size={16}
+                  fontWeight={transaction.category ? "600" : "400"}
+                >
+                  {transaction.category || "Escolher categoria"}
+                </Typo>
+              </View>
+
+              <Icons.CaretRightIcon size={20} color="#666" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.listRow, { borderBottomWidth: 0 }]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <View style={styles.iconCircle}>
+                <Icons.CalendarBlankIcon size={22} color={Colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Typo size={14} color="#888">
+                  Quando aconteceu?
+                </Typo>
+                <Typo size={16} fontWeight="500">
+                  {(transaction.date as Date).toLocaleDateString("pt-AO")}
+                </Typo>
+              </View>
+            </TouchableOpacity>
           </View>
 
-          <View style={{ gap: verticalScale(10) }}>
-            <View style={styles.flexRow}>
-            <Typo color={"#bbb"} size={16}>Descrição</Typo>
-            <Typo color={"#666"} size={14}>(Oopcional)</Typo>
-
-            </View>
+          {/* SEÇÃO 4: DETALHES ADICIONAIS */}
+          <View style={{ gap: 15 }}>
+            <Typo size={15} fontWeight="600">
+              Mais informações
+            </Typo>
             <Input
-              // placeholder="Salário"
-              keyboardType="numeric"
+              placeholder="Descrição (ex: Almoço com a família)"
+              multiline
               value={transaction?.description}
-              containerStyle={{flexDirection: 'row', height: verticalScale(100), alignItems: 'flex-start', paddingVertical: 15}}
+              containerStyle={styles.textArea}
               onChangeText={(value) =>
-                setTransaction({
-                  ...transaction,
-                  description: value,
-                })
+                setTransaction({ ...transaction, description: value })
               }
             />
-          </View>
 
-          <View style={{ gap: verticalScale(10) }}>
-             <View style={styles.flexRow}>
-            <Typo color={"#bbb"} size={16}>Imagem</Typo>
-            <Typo color={"#666"} size={14}>(Oopcional)</Typo>
-
-            </View>
             <ImageUpload
               file={transaction.image}
               onSelect={(file) =>
                 setTransaction({ ...transaction, image: file })
               }
               onClear={() => setTransaction({ ...transaction, image: null })}
-              placeholder="Carregar Imagem"
+              placeholder="Anexar Recibo"
             />
           </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={transaction.date as Date}
+              mode="date"
+              display="default"
+              maximumDate={new Date()}
+              onChange={onDateChange as any}
+            />
+          )}
         </ScrollView>
       </View>
-      <View
-        style={{
-          paddingHorizontal: scale(20),
-          paddingTop: verticalScale(15),
-          marginBottom: verticalScale(5),
-          gap: scale(12),
-        }}
-        className="items-center flex-row justify-center border-t-neutral-700 border-t"
-      >
-        {oldTransaction?.id && !loading && (
-          <Button
-            style={{ paddingHorizontal: scale(15), backgroundColor: "#dc2626" }}
-            onPress={showDeleteAlert}
-          >
-            <FontAwesome
-              name="trash"
-              color={"#fff"}
-              size={verticalScale(24)}
-            />
-          </Button>
+
+      {/* FOOTER FIXO */}
+      <View style={styles.footer}>
+        {oldTransaction?.id && (
+          <TouchableOpacity style={styles.deleteBtn} onPress={showDeleteAlert}>
+            <Icons.Trash size={24} color="#fff" weight="bold" />
+          </TouchableOpacity>
         )}
-        <Button onPress={onSubmit} loading={loading} style={{ flex: 1 }}>
-          <Typo color="#000" fontWeight={"700"}>
-            {oldTransaction?.id ? "Actualizar" : "Adicionar"}
+        <Button
+          onPress={onSubmit}
+          loading={loading}
+          style={{
+            flex: 1,
+            height: verticalScale(55),
+            borderRadius: 16,
+            backgroundColor: accentColor,
+          }}
+        >
+          <Typo fontWeight={"700"} color="#fff" size={18}>
+            {oldTransaction?.id ? "Salvar Alterações" : "Confirmar Lançamento"}
           </Typo>
         </Button>
       </View>
@@ -297,66 +500,80 @@ export default function transactionnsactionModel() {
 }
 
 const styles = StyleSheet.create({
-  datePickerButton: {
-    backgroundColor: "#444",
-    alignSelf: "flex-end",
-    padding: verticalScale(7),
-    marginRight: scale(7),
-    paddingHorizontal: verticalScale(15),
-    borderRadius: verticalScale(10),
-  },
-  dropdownContainer: {
-    height: verticalScale(54),
-    borderRadius: 1,
-    borderColor: "#999",
-    paddingHorizontal: scale(15),
-    borderCurve: "continuous",
-  },
-  dropdownItemText: {
-    color: "#fff",
-  },
-  dropdownSelectedText: {
-    color: "#fff",
-    fontSize: verticalScale(14),
-  },
-  dropdownListContainer: {
-    backgroundColor: "#111",
-    borderRadius: verticalScale(15),
-    borderCurve: "continuous",
-    paddingVertical: verticalScale(7),
-    top: 5,
-    borderColor: "#aaa",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 1,
-    shadowRadius: 15,
-    elevation: 5,
-  },
-  dropdownPlaceholder: {
-    color: "#fff",
-  },
-  dropdownItemContainer: {
-    borderRadius: verticalScale(15),
-    marginHorizontal: scale(7),
-  },
-  dropdownIcon: {
-    height: verticalScale(30),
-    tintColor: "#333",
-  },
-  dateInput: {
-    flexDirection: 'row',
-    height: verticalScale(54),
+  container: { flex: 1, paddingHorizontal: scale(20) },
+  scrollContent: { paddingBottom: verticalScale(100), gap: verticalScale(25) },
+
+  // Amount Header
+  amountSection: {
     alignItems: "center",
-    borderColor: "#333",
-    borderWidth: 1,
-    borderRadius: verticalScale(17),
-    borderCurve: "continuous",
-    paddingHorizontal: scale(15),
+    paddingVertical: verticalScale(10),
   },
-  iosDatePicker: {},
-  flexRow: {
+  amountInputWrapper: {
     flexDirection: "row",
-    alignSelf: "center",
-    gap: scale(5),
+    alignItems: "center",
+    gap: 10,
+  },
+  hugeInput: {
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    minWidth: scale(150),
+  },
+
+  row: { flexDirection: "row", gap: 15 },
+
+  dropdownContainer: {
+    height: verticalScale(50),
+    borderRadius: 15,
+    borderWidth: 1.5,
+    borderColor: "#333",
+    paddingHorizontal: 15,
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+
+  // Estilo Card para Categoria/Data
+  cardSection: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 20,
+    padding: 5,
+  },
+  listRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+    gap: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
+  },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  textArea: {
+    height: verticalScale(80),
+    alignItems: "flex-start",
+    paddingTop: 12,
+    borderRadius: 15,
+  },
+
+  footer: {
+    flexDirection: "row",
+    padding: scale(20),
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#333",
+    backgroundColor: "#000", // Ou cor do tema
+  },
+  deleteBtn: {
+    width: verticalScale(55),
+    height: verticalScale(55),
+    backgroundColor: Colors.warning,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

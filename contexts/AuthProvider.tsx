@@ -1,6 +1,12 @@
+import * as schema from "@/db/schema";
 import { AuthContextType, UserType } from "@/types";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-community/netinfo";
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/expo-sqlite";
+// import * as Crypto from "expo-crypto"; // Para gerar UIDs únicos offline
 import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import { useSQLiteContext } from "expo-sqlite";
 import {
   createContext,
   ReactNode,
@@ -12,167 +18,250 @@ import {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<UserType | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<UserType>(null);
+  const [isGuest, setIsGuest] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+
   const router = useRouter();
+  const db = useSQLiteContext();
+  const drizzleDb = drizzle(db, { schema });
 
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const userJson = await AsyncStorage.getItem("user");
-        
-        if (userJson) {
-          const { user} = JSON.parse(userJson);
-console.log("user: " + user);
-          setUser(user);
-          if (user?.uid) {
-            updateUserData(user.uid);
-          }
-          router.replace("/(tabs)");
-        } else {
-          setUser(null);
-          router.replace("/(auth)/welcome");
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOnline(state.isConnected === true);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 🚀 Carregar usuário local ao iniciar
+  useEffect(() => {
+    const loadUser = async () => {
+      const localUsers = await drizzleDb.query.users.findMany();
+
+      if (localUsers.length > 0) {
+        const localUser = localUsers[0];
+        setUser(localUser as any);
+        setIsAuthenticated(true);
+        setIsGuest(localUser.uid === "guest");
+
+        // Se estiver online e não for convidado, tenta sincronizar em background
+        if (isOnline && localUser.uid !== "guest") {
+          syncDataWithServer(localUser.uid);
         }
-      } catch (error) {
-        console.log("Erro ao verificar usuário:", error);
-        setUser(null);
+        router.replace("/(tabs)");
+      } else {
         router.replace("/(auth)/welcome");
       }
     };
+    loadUser();
+  }, [isOnline]);
 
-    checkUser();
-  }, []);
+  // 👤 Entrar como convidado (Mesma lógica, agora centralizada)
+  const enterAsGuest = async () => {
+    const guestUser: UserType = {
+      uid: "guest",
+      name: "Convidado",
+      email: null,
+      image: null,
+      is_dirty: 0,
+      updated_at: new Date().toISOString(),
+    };
 
-  const login = async (email: string, password: string) => {
-    try {
-      const res = await fetch("http://10.109.30.111:3000/api/v1/users/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-      if (res.status === 200) {
-        await AsyncStorage.setItem(
-          "token",
-          data.token
-        );
-        await AsyncStorage.setItem(
-          "refreshToken",
-          data.refreshToken
-        );
-        await AsyncStorage.setItem(
-          "user",
-          JSON.stringify({ user: data.data })
-        );
-        setUser(data.data);
-        setIsAuthenticated(true);
-        return { success: true };
-      } else {
-        return {success: false, msg: data.msg}
-      }
-    } catch (error: any) {
-      let msg = error.message;
-      if (msg.includes("(auth/invalid-credential)"))
-        msg = "Credenciais Erradas";
-      if (msg.includes("(auth/invalid-email)")) msg = "E-mail Inválido";
-      if (msg.includes("(auth/network-request-failed)"))
-        msg = "Sem conexão com a internet. Tente novamente mais tarde!";
-      return { success: false, msg };
-    }
+    await drizzleDb
+      .insert(schema.users)
+      .values(guestUser as any)
+      .onConflictDoNothing();
+    setUser(guestUser);
+    setIsAuthenticated(true);
+    setIsGuest(true);
+    router.replace("/(tabs)");
   };
 
   const register = async (email: string, password: string, name: string) => {
     try {
-      const res = await fetch(
-        "http://10.109.30.111:3000/api/v1/users/auth/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password, name }),
-        }
-      );
+      const existing = await drizzleDb
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.email, email));
 
-      const data = await res.json();
-      if (res.status === 201) {
-        return { success: true };
-      } else {
-        return {success: false, msg: data.msg}
-      }
-    } catch (error: any) {
-      let msg = error.message;
-      if (msg.includes("(auth/invalid-credential)"))
-        msg = "Credenciais Erradas";
-      if (msg.includes("(auth/invalid-email)")) msg = "E-mail Inválido";
-      if (
-        msg.includes("(auth/network-request-failed)") ||
-        msg.includes("Network request failed")
-      )
-        msg = "Sem conexão com a internet. Tente novamente mais tarde!";
-      return { success: false, msg };
+      if (existing.length > 0)
+        return { success: false, msg: "E-mail já registrado." };
+
+      // 🔐 1. Transformar a senha em um HASH (Segurança)
+      // Não guardamos "123456", guardamos "a665a45920422f9d..."
+      // const passwordHash = await Crypto.digestStringAsync(
+      //   Crypto.CryptoDigestAlgorithm.SHA256,
+      //   password,
+      // );
+
+      const newUser = {
+        // uid: Crypto.randomUUID(),
+        uid: "2",
+        name,
+        email,
+        // password: passwordHash,
+        password,
+        is_dirty: 1,
+        updated_at: new Date().toISOString(),
+      };
+
+      await drizzleDb.insert(schema.users).values(newUser as any);
+      return { success: true };
+    } catch (err) {
+      return { success: false, msg: "Erro ao salvar localmente." };
     }
   };
 
-  const updateUserData = async (uid: string) => {
+  const login = async (email: string, password: string) => {
     try {
-      // const userJson = await AsyncStorage.getItem(`user`);
-      let token = await AsyncStorage.getItem('token');
-      const res = await fetch("http://10.0.2.2:3000/api/v1/users/" + uid, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const local = await drizzleDb
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.email, email));
 
-      if (res.ok) {
-        // const data = JSON.parse(userJson);
-        const data = await res.json();
-        const userData: UserType = {
-          uid: data.uid,
-          email: data.email || null,
-          name: data.name || null,
-          image: data.image || null,
-        };
-        
-        await AsyncStorage.setItem(
-          "user",
-          JSON.stringify({ user: data })
-        );
-        setUser({ ...userData });
-      } else {
-        console.log("Usuário não encontrado no AsyncStorage.");
-        logout()
+      if (local.length > 0) {
+        const u = local[0];
+
+        // 🔐 2. Verificar a senha offline
+        // const inputPasswordHash = await Crypto.digestStringAsync(
+        //   Crypto.CryptoDigestAlgorithm.SHA256,
+        //   password,
+        // );
+
+        if (u.password === password) {
+          setUser(u as any);
+          setIsAuthenticated(true);
+          return { success: true };
+        } else {
+          return { success: false, msg: "Palavra-passe incorreta." };
+        }
       }
-    } catch (error: any) {
-      console.log("Erro ao carregar dados do usuário:", error.message);
+
+      // Se não houver local, tenta online...
+      // if (isOnline) return await loginOnline(email, password);
+
+      return { success: false, msg: "Usuário não encontrado offline." };
+    } catch (err) {
+      return { success: false, msg: "Erro no processamento." };
+    }
+  };
+
+  // const loginOnline = async (email: string, password: string) => {
+  //   try {
+  //     const res = await fetch(
+  //       `${process.env.EXPO_PUBLIC_API_DEVICE}users/auth/login`,
+  //       {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({ email, password }), // Envia texto puro para o bcrypt do back
+  //       },
+  //     );
+
+  //     const data = await res.json();
+
+  //     if (res.ok) {
+  //       const u = data.data;
+  //       await SecureStore.setItemAsync("token", data.token);
+
+  //       // 🔐 Gerar o hash da senha para permitir futuros logins offline
+  //       const passwordHashForOffline = await Crypto.digestStringAsync(
+  //         Crypto.CryptoDigestAlgorithm.SHA256,
+  //         password,
+  //       );
+
+  //       await drizzleDb
+  //         .insert(schema.users)
+  //         .values({
+  //           uid: u.uid,
+  //           email: u.email,
+  //           name: u.name,
+  //           password: passwordHashForOffline, // SALVA O HASH AQUI
+  //           is_dirty: 0,
+  //         })
+  //         .onConflictDoUpdate({
+  //           target: schema.users.uid,
+  //           set: {
+  //             name: u.name,
+  //             email: u.email,
+  //             password: passwordHashForOffline, // ATUALIZA SE MUDOU
+  //             is_dirty: 0,
+  //           },
+  //         });
+
+  //       setUser(u);
+  //       setIsAuthenticated(true);
+  //       return { success: true };
+  //     }
+  //     return { success: false, msg: data.msg };
+  //   } catch (err) {
+  //     return { success: false, msg: "Servidor indisponível." };
+  //   }
+  // };
+
+  // 🔄 Função de Sincronização (Disparada quando online)
+  const syncDataWithServer = async (uid: string) => {
+    const [localUser] = await drizzleDb
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.uid, uid));
+
+    if (localUser?.is_dirty && isOnline) {
+      try {
+        // Exemplo: Enviar dados pendentes para o servidor
+        const res = await fetch(
+          `${process.env.EXPO_PUBLIC_API_DEVICE}users/sync`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(localUser),
+          },
+        );
+
+        if (res.ok) {
+          // Marcar como limpo localmente
+          await drizzleDb
+            .update(schema.users)
+            .set({ is_dirty: 0 })
+            .where(eq(schema.users.uid, uid));
+        }
+      } catch (e) {
+        console.log("Falha na sincronização silenciosa");
+      }
     }
   };
 
   const logout = async () => {
-    await AsyncStorage.multiRemove(["token", "refreshToken", "user"])
+    await SecureStore.deleteItemAsync("token");
+    await drizzleDb.delete(schema.users);
     setUser(null);
     setIsAuthenticated(false);
-    router.replace("/(auth)/welcome")
+    setIsGuest(false);
+    router.replace("/(auth)/welcome");
   };
 
   return (
     <AuthContext.Provider
-      value={{ login, register, logout, setUser, updateUserData, user }}
+      value={{
+        login,
+        register,
+        logout,
+        enterAsGuest,
+        user,
+        setUser,
+        isAuthenticated,
+        isGuest,
+        isOnline,
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (!context)
     throw new Error("useAuth deve ser usado dentro de AuthProvider");
-  }
   return context;
 };

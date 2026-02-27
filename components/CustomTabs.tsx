@@ -1,63 +1,53 @@
-import { verticalScale } from "@/utils/styling";
-import { FontAwesome } from "@expo/vector-icons";
+import { Colors } from "@/constants/colors";
+import { useTheme } from "@/contexts/ThemeContext";
+import { scale, verticalScale } from "@/utils/styling";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import * as Icons from "phosphor-react-native";
 import React from "react";
-import { Platform, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 
 export default function CustomTabs({
   state,
   descriptors,
   navigation,
 }: BottomTabBarProps) {
-  const tabBarIcons: any = {
-    index: (isFocuse: boolean) => (
-      <FontAwesome
-        name="home"
-        size={verticalScale(30)}
-        color={isFocuse ? "#f97316" : "#999"}
-      />
-    ),
-    statistic: (isFocuse: boolean) => (
-      <FontAwesome
-        name="bar-chart"
-        size={verticalScale(30)}
-        color={isFocuse ? "#f97316" : "#999"}
-      />
-    ),
-    wallet: (isFocuse: boolean) => (
-      <FontAwesome
-        name="google-wallet"
-        size={verticalScale(30)}
-        color={isFocuse ? "#f97316" : "#999"}
-      />
-    ),
-    profile: (isFocuse: boolean) => (
-      <FontAwesome
-        name="user"
-        size={verticalScale(30)}
-        color={isFocuse ? "#f97316" : "#999"}
-      />
-    ),
-  };
-  return (
-    <SafeAreaView>
+  const { theme } = useTheme();
+  const activeColors = Colors[theme];
 
+  // Configuração dos ícones com variantes Fill/Outline
+  const renderIcon = (routeName: string, isFocused: boolean) => {
+    const iconConfig: Icons.IconProps = {
+      size: verticalScale(26),
+      color: isFocused ? Colors.primary : activeColors.text,
+      weight: isFocused ? "fill" : ("regular" as const),
+    };
+
+    switch (routeName) {
+      case "index":
+        return <Icons.HouseIcon {...iconConfig} />;
+      case "statistics":
+        return <Icons.ChartBarIcon {...iconConfig} />;
+      case "wallet":
+        return <Icons.WalletIcon {...iconConfig} />;
+      case "profile":
+        return <Icons.UserIcon {...iconConfig} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
     <View
-      className="flex-row justify-around items-center w-full border-t"
-      style={{
-        height: Platform.OS == "ios" ? verticalScale(73) : verticalScale(55),
-      }}
+      style={[
+        styles.tabContainer,
+        {
+          backgroundColor: activeColors.background,
+          borderTopColor: theme === "dark" ? "#333" : "#eee",
+        },
+      ]}
     >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
-        const label: any =
-          options.tabBarLabel !== undefined
-            ? options.tabBarLabel
-            : options.title !== undefined
-              ? options.title
-              : route.name;
-
         const isFocused = state.index === index;
 
         const onPress = () => {
@@ -68,38 +58,75 @@ export default function CustomTabs({
           });
 
           if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name, route.params);
+            navigation.navigate(route.name);
           }
-        };
-
-        const onLongPress = () => {
-          navigation.emit({
-            type: "tabLongPress",
-            target: route.key,
-          });
         };
 
         return (
           <TouchableOpacity
             key={route.name}
-            accessibilityState={isFocused ? { selected: true } : {}}
-            accessibilityLabel={options.tabBarAccessibilityLabel}
-            testID={options.tabBarButtonTestID}
             onPress={onPress}
-            onLongPress={onLongPress}
-            className="justify-around items-center"
-            style={{
-              marginBottom:
-                Platform.OS == "ios" ? verticalScale(10) : verticalScale(5),
-            }}
+            activeOpacity={0.8}
+            style={styles.tabButton}
           >
-            {
-                tabBarIcons[route.name] && tabBarIcons[route.name](isFocused)
-            }
+            {/* O Ícone */}
+            <View
+              style={[
+                styles.iconWrapper,
+                isFocused && {
+                  backgroundColor: theme === "dark" ? "#222" : "#FFF3E0",
+                },
+              ]}
+            >
+              {renderIcon(route.name, isFocused)}
+            </View>
+
+            {/* Indicador de Dot (Bolinha) */}
+            {isFocused && (
+              <View
+                style={[styles.activeDot, { backgroundColor: Colors.primary }]}
+              />
+            )}
           </TouchableOpacity>
         );
       })}
     </View>
-      </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  tabContainer: {
+    flexDirection: "row",
+    width: "100%",
+    borderTopWidth: 1,
+    // Altura ajustada para acomodar o Safe Area manualmente para melhor controle
+    height: Platform.OS === "ios" ? verticalScale(85) : verticalScale(65),
+    paddingBottom:
+      Platform.OS === "ios" ? verticalScale(20) : verticalScale(10),
+    justifyContent: "space-around",
+    alignItems: "center",
+    // Sombra leve
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 20,
+  },
+  tabButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+  iconWrapper: {
+    padding: scale(8),
+    borderRadius: scale(14),
+    marginBottom: verticalScale(4),
+  },
+  activeDot: {
+    width: scale(4),
+    height: scale(4),
+    borderRadius: scale(2),
+    position: "absolute",
+    bottom: verticalScale(-2),
+  },
+});

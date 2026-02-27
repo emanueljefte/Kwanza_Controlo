@@ -1,144 +1,218 @@
 import Header from "@/components/Header";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Typo from "@/components/Typo";
+import { Colors } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthProvider";
 import { getProfileImage } from "@/services/imageService";
 import { accountOptionsType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
-import { FontAwesome } from "@expo/vector-icons";
+import { FontAwesome6 } from "@expo/vector-icons"; // FontAwesome6 para ícones mais nítidos
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Alert, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 export default function Profile() {
   const { user, logout } = useAuth();
   const router = useRouter();
+
   const accountOptions: accountOptionsType[] = [
     {
       title: "Editar Perfil",
-      icon: <FontAwesome name="user" size={26} color={"#fff"} />,
+      icon: <FontAwesome6 name="user-pen" size={20} color={"#fff"} />,
       routeName: "/(modals)/profileModal",
       bgColor: "#6366f1",
     },
     {
-      title: "Configurações",
-      icon: <FontAwesome name="gear" size={26} color={"#fff"} />,
-      // routeName: "/(modals)/profileModal",
-      bgColor: "#059669",
+      title: "Notificações",
+      icon: <FontAwesome6 name="bell" size={20} color={"#fff"} />,
+      routeName: "/screens/notifications",
+      bgColor: "#f59e0b",
     },
     {
-      title: "Políticas de Privacidade",
-      icon: <FontAwesome name="lock" size={26} color={"#fff"} />,
-      // routeName: "/(modals)/profileModal",
-      bgColor: "#ccc",
+      title: "Configurações",
+      icon: <FontAwesome6 name="gear" size={20} color={"#fff"} />,
+      routeName: "/screens/settings",
+      bgColor: "#10b981",
     },
     {
       title: "Sair",
-      icon: <FontAwesome name="power-off" size={26} color={"#fff"} />,
-      // routeName: "/(modals)/profileModal",
+      icon: <FontAwesome6 name="power-off" size={20} color={"#fff"} />,
       bgColor: "#e11d48",
     },
   ];
-  
+
   const handleLogout = async () => {
-    // await signOut(auth)
     await logout();
   };
 
   const showLogoutAlert = () => {
-    Alert.alert("Confirmação", "Tens a certeza que desejas deslogar?", [
-      {
-        text: "Cancelar",
-        onPress: () => console.log("Deslogar cancelado"),
-        style: "cancel",
-      },
-      {
-        text: "Deslogar",
-        onPress: () => handleLogout(),
-        style: "destructive",
-      },
-    ]);
+    Alert.alert(
+      "Confirmação",
+      "Tens a certeza que desejas terminar a sessão?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Sair", onPress: handleLogout, style: "destructive" },
+      ],
+    );
   };
 
   const handlePress = (item: accountOptionsType) => {
-    if (item.title == "Sair") {
+    if (item.title === "Sair") {
       showLogoutAlert();
+      return;
     }
-
-    if (item.routeName) {
-      router.push(item.routeName);
-    }
+    if (item.routeName) router.push(item.routeName as any);
   };
+
   return (
     <ScreenWrapper>
-      <View className="flex-1" style={{ paddingHorizontal: scale(20) }}>
-        <Header title="Perfil" style={{ marginVertical: verticalScale(10) }} />
+      <View style={styles.container}>
+        <Header title="Perfil" style={{ marginBottom: verticalScale(20) }} />
 
-        <View
-          className="items-center"
-          style={{ marginTop: verticalScale(30), gap: verticalScale(15) }}
-        >
-          <View className="" style={{}}>
+        {/* Header do Perfil (Avatar + Info) */}
+        <View style={styles.profileCard}>
+          <View style={styles.avatarWrapper}>
             <Image
               source={getProfileImage(user?.image)}
-              className="self-center bg-neutral-300 rounded-[200px]"
-              style={{ height: verticalScale(135), width: verticalScale(135) }}
+              style={styles.avatar}
               contentFit="cover"
-              transition={100}
+              transition={150}
             />
+            <TouchableOpacity
+              style={styles.editBadge}
+              onPress={() => router.push("/(modals)/profileModal")}
+            >
+              <FontAwesome6 name="camera" size={12} color="#fff" />
+            </TouchableOpacity>
           </View>
-          {user && (
-            <View className="items-center" style={{ gap: verticalScale(4) }}>
-              <Typo size={24} fontWeight={"600"} color="#ddd">
-                {user.name}{" "}
-              </Typo>
-              <Typo size={15} fontWeight={"600"} color="#ccc">
-                {user.email}
-              </Typo>
-            </View>
-          )}
+
+          <View style={styles.userInfo}>
+            <Typo size={24} fontWeight="700">
+              {user?.name || "Utilizador"}
+            </Typo>
+            <Typo size={14} color="#888">
+              {user?.email}
+            </Typo>
+          </View>
         </View>
-        <View style={{ marginTop: verticalScale(35) }}>
+
+        {/* Lista de Opções Estilizada */}
+        <View style={styles.optionsWrapper}>
           {accountOptions.map((item, index) => (
             <Animated.View
-              key={index.toString()}
-              entering={FadeInDown.delay(index * 50)
-                .springify()
-                .damping(14)}
-              style={{ marginBottom: verticalScale(17) }}
+              key={index}
+              entering={FadeInDown.delay(index * 100).damping(15)}
             >
               <TouchableOpacity
-                className="flex-row items-center"
-                style={{ gap: scale(10) }}
+                activeOpacity={0.7}
+                style={styles.optionItem}
                 onPress={() => handlePress(item)}
               >
                 <View
-                  className="bg-neutral-500 items-center justify-center"
-                  style={{
-                    height: verticalScale(44),
-                    width: verticalScale(44),
-                    borderRadius: verticalScale(15),
-                    borderCurve: "continuous",
-                    backgroundColor: item?.bgColor,
-                  }}
+                  style={[
+                    styles.iconContainer,
+                    { backgroundColor: item.bgColor },
+                  ]}
                 >
-                  {item.icon && item.icon}
+                  {item.icon}
                 </View>
-                <Typo size={26} style={{ flex: 1 }} fontWeight={"500"}>
+
+                <Typo size={17} fontWeight="500" style={{ flex: 1 }}>
                   {item.title}
                 </Typo>
-                <FontAwesome
-                  name="caret-right"
-                  size={verticalScale(20)}
-                  color={"#fff"}
-                />
+
+                <FontAwesome6 name="chevron-right" size={14} color="#444" />
               </TouchableOpacity>
+
+              {/* Divisor entre itens, exceto no último */}
+              {index !== accountOptions.length - 1 && (
+                <View style={styles.divider} />
+              )}
             </Animated.View>
           ))}
+        </View>
+
+        {/* Versão do App ou Copyright ao fundo */}
+        <View style={styles.footer}>
+          <Typo size={12} color="#444">
+            Versão 1.0.2 - Finanças Angola
+          </Typo>
         </View>
       </View>
     </ScreenWrapper>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: scale(20),
+  },
+  profileCard: {
+    alignItems: "center",
+    marginBottom: verticalScale(35),
+  },
+  avatarWrapper: {
+    position: "relative",
+    marginBottom: verticalScale(15),
+  },
+  avatar: {
+    height: verticalScale(130),
+    width: verticalScale(130),
+    borderRadius: 65,
+    borderWidth: 4,
+    borderColor: "#262626",
+  },
+  editBadge: {
+    position: "absolute",
+    bottom: 5,
+    right: 5,
+    backgroundColor: Colors.primary,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#1A1A1A",
+  },
+  userInfo: {
+    alignItems: "center",
+    gap: 2,
+  },
+  optionsWrapper: {
+    backgroundColor: "#1F1F1F",
+    borderRadius: 24,
+    paddingVertical: verticalScale(8),
+    borderWidth: 1,
+    borderColor: "#262626",
+    overflow: "hidden",
+  },
+  optionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: verticalScale(14),
+    paddingHorizontal: scale(16),
+    gap: scale(14),
+  },
+  iconContainer: {
+    height: 40,
+    width: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#262626",
+    marginHorizontal: scale(16),
+    marginLeft: scale(60), // Alinha com o início do texto
+  },
+  footer: {
+    marginTop: "auto",
+    alignItems: "center",
+    paddingBottom: verticalScale(20),
+  },
+});
