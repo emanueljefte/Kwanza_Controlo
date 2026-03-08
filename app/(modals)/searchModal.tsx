@@ -10,7 +10,10 @@ import useFetchData from "@/hooks/useFetchData";
 import { TransactionType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
 import { useFocusEffect } from "expo-router";
-import { MagnifyingGlass, XCircle } from "phosphor-react-native";
+import {
+  MagnifyingGlassIcon,
+  XCircleIcon
+} from "phosphor-react-native";
 import React, { useCallback, useRef, useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 
@@ -62,14 +65,14 @@ export default function SearchModal() {
             placeholder="O que procuras? (Ex: Almoço, Salário...)"
             value={search}
             onChangeText={setSearch}
-            icon={<MagnifyingGlass size={20} weight="bold" />}
+            icon={<MagnifyingGlassIcon size={20} weight="bold" />}
           />
           {search.length > 0 && (
             <TouchableOpacity
               style={styles.clearButton}
               onPress={() => setSearch("")}
             >
-              <XCircle size={22} weight="fill" color="#999" />
+              <XCircleIcon size={22} weight="fill" color="#999" />
             </TouchableOpacity>
           )}
         </View>
@@ -81,7 +84,7 @@ export default function SearchModal() {
           {/* INDICADOR DE RESULTADOS */}
           {search.length > 1 && (
             <View style={styles.resultsInfo}>
-              <Typo size={14} color="#666">
+              <Typo size={14} color="#888">
                 Encontramos{" "}
                 <Typo size={14} fontWeight="700" color={Colors.primary}>
                   {filteredTransaction.length}

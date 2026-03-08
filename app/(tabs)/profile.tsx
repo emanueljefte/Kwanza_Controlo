@@ -3,10 +3,11 @@ import ScreenWrapper from "@/components/ScreenWrapper";
 import Typo from "@/components/Typo";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useTheme } from "@/contexts/ThemeContext";
 import { getProfileImage } from "@/services/imageService";
 import { accountOptionsType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
-import { FontAwesome6 } from "@expo/vector-icons"; // FontAwesome6 para ícones mais nítidos
+import { FontAwesome6 } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -16,6 +17,8 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 export default function Profile() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { theme } = useTheme();
+  const activeColors = Colors[theme];
 
   const accountOptions: accountOptionsType[] = [
     {
@@ -99,7 +102,12 @@ export default function Profile() {
         </View>
 
         {/* Lista de Opções Estilizada */}
-        <View style={styles.optionsWrapper}>
+        <View
+          style={[
+            styles.optionsWrapper,
+            { backgroundColor: activeColors.border },
+          ]}
+        >
           {accountOptions.map((item, index) => (
             <Animated.View
               key={index}
@@ -183,7 +191,6 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   optionsWrapper: {
-    backgroundColor: "#1F1F1F",
     borderRadius: 24,
     paddingVertical: verticalScale(8),
     borderWidth: 1,

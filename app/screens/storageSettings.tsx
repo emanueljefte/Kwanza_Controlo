@@ -1,19 +1,23 @@
+import BackButton from "@/components/BackButton";
+import Header from "@/components/Header";
+import ScreenWrapper from "@/components/ScreenWrapper";
 import Typo from "@/components/Typo";
 import * as schema from "@/db/schema";
+import { verticalScale } from "@/utils/styling";
 import { drizzle } from "drizzle-orm/expo-sqlite";
 import { useSQLiteContext } from "expo-sqlite";
 import {
-    ArrowsCounterClockwiseIcon,
-    CloudArrowDownIcon,
-    CloudArrowUp
+  ArrowsCounterClockwiseIcon,
+  CloudArrowDownIcon,
+  CloudArrowUpIcon,
 } from "phosphor-react-native";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    StyleSheet,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  View,
 } from "react-native";
 
 export default function StorageSettings() {
@@ -35,52 +39,56 @@ export default function StorageSettings() {
   };
 
   return (
-    <View style={styles.container}>
-      <Typo size={18} fontWeight="700" style={styles.title}>
-        Dados e Armazenamento
-      </Typo>
-
-      <View style={styles.card}>
-        {/* BOTÃO BACKUP */}
-        <StorageOption
-          title="Fazer Backup Agora"
-          description="Enviar dados atuais para a nuvem"
-          icon={<CloudArrowUp size={22} color="#fff" />}
-          bgColor="#0ea5e9"
-          onPress={handleBackup}
-          loading={loading === "backup"}
+    <ScreenWrapper>
+      <View style={styles.container}>
+        <Header
+          title={"Dados e Armazenamento"}
+          leftIcon={<BackButton />}
+          style={{ marginBottom: verticalScale(20) }}
         />
 
-        <View style={styles.divider} />
+        <View style={styles.card}>
+          {/* BOTÃO BACKUP */}
+          <StorageOption
+            title="Fazer Backup Agora"
+            description="Enviar dados atuais para a nuvem"
+            icon={<CloudArrowUpIcon size={22} color="#fff" />}
+            bgColor="#0ea5e9"
+            onPress={handleBackup}
+            loading={loading === "backup"}
+          />
 
-        {/* BOTÃO RECUPERAÇÃO */}
-        <StorageOption
-          title="Restaurar Dados"
-          description="Substituir dados locais pelos da nuvem"
-          icon={<CloudArrowDownIcon size={22} color="#fff" />}
-          bgColor="#f59e0b"
-          onPress={() =>
-            Alert.alert(
-              "Aviso",
-              "Isso apagará seus dados locais atuais. Continuar?",
-            )
-          }
-        />
+          <View style={styles.divider} />
 
-        <View style={styles.divider} />
+          {/* BOTÃO RECUPERAÇÃO */}
+          <StorageOption
+            title="Restaurar Dados"
+            description="Substituir dados locais pelos da nuvem"
+            icon={<CloudArrowDownIcon size={22} color="#fff" />}
+            bgColor="#f59e0b"
+            onPress={() =>
+              Alert.alert(
+                "Aviso",
+                "Isso apagará seus dados locais atuais. Continuar?",
+              )
+            }
+          />
 
-        {/* BOTÃO SINCRONIZAÇÃO */}
-        <StorageOption
-          title="Sincronização Forçada"
-          description="Sincronizar pendências imediatamente"
-          icon={<ArrowsCounterClockwiseIcon size={22} color="#fff" />}
-          bgColor="#10b981"
-          onPress={() =>
-            Alert.alert("Sincronizando", "Verificando dados pendentes...")
-          }
-        />
+          <View style={styles.divider} />
+
+          {/* BOTÃO SINCRONIZAÇÃO */}
+          <StorageOption
+            title="Sincronização Forçada"
+            description="Sincronizar pendências imediatamente"
+            icon={<ArrowsCounterClockwiseIcon size={22} color="#fff" />}
+            bgColor="#10b981"
+            onPress={() =>
+              Alert.alert("Sincronizando", "Verificando dados pendentes...")
+            }
+          />
+        </View>
       </View>
-    </View>
+    </ScreenWrapper>
   );
 }
 
@@ -109,7 +117,11 @@ const StorageOption = ({
 );
 
 const styles = StyleSheet.create({
-  container: { marginTop: 25 },
+  container: {
+    marginTop: verticalScale(20),
+    flex: 1,
+    paddingHorizontal: verticalScale(20),
+  },
   title: { marginBottom: 15, marginLeft: 5 },
   card: {
     backgroundColor: "rgba(255,255,255,0.05)",

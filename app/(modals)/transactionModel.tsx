@@ -1,14 +1,20 @@
 import BackButton from "@/components/BackButton";
 import Button from "@/components/ButtonLayout";
+import CustomAlert from "@/components/CustomAlert";
 import Header from "@/components/Header";
 import ImageUpload from "@/components/ImageUpload";
 import Input from "@/components/Input";
 import ModalWrapper from "@/components/ModalWrapper";
 import Typo from "@/components/Typo";
 import { Colors } from "@/constants/colors";
-import { transactionType } from "@/constants/data";
-import { ICON_CATALOG, INCOME_CATALOG } from "@/constants/icons";
+
+import {
+  ICON_CATALOG,
+  INCOME_CATALOG,
+  transactionType,
+} from "@/constants/icons";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useTheme } from "@/contexts/ThemeContext";
 import * as schema from "@/db/schema";
 import useFetchData from "@/hooks/useFetchData";
 import {
@@ -32,7 +38,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
@@ -48,19 +53,20 @@ export default function TransactionModel() {
     walletId: 0,
     image: null,
   });
-  const colorSchema = useColorScheme();
-  const theme = Colors[colorSchema!] ?? Colors.dark;
+  const { theme } = useTheme();
+  const activeColors = Colors[theme!];
   const isExpense = transaction.type === "expense";
-  const accentColor = isExpense ? "#ef4444" : "#10b981"; // Vermelho vs Verde
+  const accentColor = isExpense ? "#ef4444" : "#10b981";
   const [loading, setLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const router = useRouter();
-  const [category, setCategory] = useState({
-    name: "",
-    displayName: "",
-    comp: "",
-  });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info" as any,
+  });
 
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
@@ -70,7 +76,13 @@ export default function TransactionModel() {
       setRefreshKey((prev) => prev + 1);
     }, []),
   );
-
+  const showAlert = (
+    title: string,
+    message: string,
+    type: "success" | "error" = "error",
+  ) => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
   const {
     data: wallets,
     error: walletError,
@@ -153,7 +165,7 @@ export default function TransactionModel() {
       transaction;
 
     if (!walletId || !date || !amount || (type == "expense" && !category)) {
-      Alert.alert("Transação", "Por favor Preencha todos os campos");
+      showAlert("Transação", "Por favor Preencha todos os campos");
       return;
     }
 
@@ -161,7 +173,7 @@ export default function TransactionModel() {
     today.setHours(23, 59, 59, 999); // Define para o final do dia atual
 
     if (new Date(date) > today) {
-      Alert.alert(
+      showAlert(
         "Data Inválida",
         "Não podes registar uma transação para o futuro!",
       );
@@ -189,7 +201,7 @@ export default function TransactionModel() {
     if (res.success) {
       router.back();
     } else {
-      Alert.alert("transaction", res.msg);
+      showAlert("transaction", res.msg as string);
     }
   };
 
@@ -205,7 +217,7 @@ export default function TransactionModel() {
     if (res.success) {
       router.back();
     } else {
-      Alert.alert("transação", res.msg);
+      showAlert("transação", res.msg as string);
     }
   };
 
@@ -232,7 +244,8 @@ export default function TransactionModel() {
     // 1. Seleciona o catálogo
     const catalog = type === "income" ? INCOME_CATALOG : ICON_CATALOG;
 
-    if (!categoryName) return type === "income" ? Icons.TrendUp : Icons.Tag;
+    if (!categoryName)
+      return type === "income" ? Icons.TrendUpIcon : Icons.TagIcon;
 
     // 2. Extrai todos os itens de todas as seções num único array plano
     // Usamos 'any' aqui apenas para o flatten, para evitar o conflito de chaves do TS
@@ -245,7 +258,8 @@ export default function TransactionModel() {
 
     // 4. Retorna o componente ou o fallback
     return (
-      categoryItem?.comp || (type === "income" ? Icons.TrendUp : Icons.Tag)
+      categoryItem?.comp ||
+      (type === "income" ? Icons.TrendUpIcon : Icons.TagIcon)
     );
   };
 
@@ -274,7 +288,7 @@ export default function TransactionModel() {
                 keyboardType="numeric"
                 value={transaction?.amount.toString()}
                 containerStyle={styles.hugeInput}
-                style={{ fontSize: 40, fontWeight: "700", color: accentColor }}
+                style={{ fontSize: 30, fontWeight: "700", color: accentColor }}
                 onChangeText={(value) =>
                   setTransaction({
                     ...transaction,
@@ -289,9 +303,15 @@ export default function TransactionModel() {
           <View style={styles.row}>
             <View style={{ flex: 1, gap: 8 }}>
               <Typo size={15} fontWeight="600">
-                Fluxo
+                Tipo
               </Typo>
               <Dropdown
+                containerStyle={[
+                  styles.dropdownListContainer,
+                  {
+                    backgroundColor: activeColors.background,
+                  },
+                ]}
                 style={[styles.dropdownContainer, { borderColor: accentColor }]}
                 data={transactionType}
                 labelField={"label"}
@@ -300,7 +320,11 @@ export default function TransactionModel() {
                 onChange={(item) =>
                   setTransaction({ ...transaction, type: item.value })
                 }
+                itemTextStyle={{
+                  color: activeColors.title,
+                }}
                 selectedTextStyle={{ color: accentColor, fontWeight: "bold" }}
+                activeColor={Colors.primary + "40"}
               />
             </View>
 
@@ -326,6 +350,15 @@ export default function TransactionModel() {
                 )}
               </View>
               <Dropdown
+                containerStyle={[
+                  styles.dropdownListContainer,
+                  {
+                    backgroundColor: activeColors.background,
+                  },
+                ]}
+                itemTextStyle={{
+                  color: activeColors.title,
+                }}
                 style={[
                   styles.dropdownContainer,
                   !wallets?.length && { opacity: 0.6, borderColor: "#666" }, // Estilo visual de desabilitado
@@ -334,7 +367,10 @@ export default function TransactionModel() {
                 data={
                   !wallets || wallets.length === 0
                     ? [{ label: "Nenhuma carteira encontrada", value: null }]
-                    : wallets.map((w) => ({ label: w.name, value: w.id }))
+                    : wallets.map((w) => ({
+                        label: `${w.name} (${w.amount} KZ)`,
+                        value: w.id,
+                      }))
                 }
                 labelField={"label"}
                 valueField={"value"}
@@ -352,6 +388,11 @@ export default function TransactionModel() {
                     setTransaction({ ...transaction, walletId: item.value });
                   }
                 }}
+                selectedTextStyle={{
+                  color: activeColors.title,
+                  fontWeight: "bold",
+                }}
+                activeColor={Colors.primary + "40"}
               />
 
               {/* FEEDBACK VISUAL EXTRA */}
@@ -495,6 +536,13 @@ export default function TransactionModel() {
           </Typo>
         </Button>
       </View>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+      />
     </ModalWrapper>
   );
 }
@@ -552,7 +600,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
+  dropdownListContainer: {
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "#333",
+  },
   textArea: {
     height: verticalScale(80),
     alignItems: "flex-start",

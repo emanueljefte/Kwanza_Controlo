@@ -1,11 +1,14 @@
+import BackButton from "@/components/BackButton";
+import Header from "@/components/Header";
+import ScreenWrapper from "@/components/ScreenWrapper";
 import Typo from "@/components/Typo";
 import { Colors } from "@/constants/colors";
 import { scale, verticalScale } from "@/utils/styling";
 import {
-    CopyrightIcon,
-    GithubLogoIcon,
-    GlobeIcon,
-    InfoIcon
+  CopyrightIcon,
+  GithubLogoIcon,
+  GlobeIcon,
+  InfoIcon,
 } from "phosphor-react-native";
 import React from "react";
 import { Linking, Pressable, StyleSheet, View } from "react-native";
@@ -14,71 +17,75 @@ export default function AboutApp() {
   const appVersion = "1.0.4"; // Idealmente viria do app.json via Expo Constants
 
   return (
-    <View style={styles.container}>
-      <Typo size={18} fontWeight="700" style={styles.title}>
-        Sobre o App
-      </Typo>
+    <ScreenWrapper>
+      <View style={styles.container}>
+        <Header
+          title={"Sobre o App"}
+          leftIcon={<BackButton />}
+          style={{ marginBottom: verticalScale(20) }}
+        />
 
-      <View style={styles.card}>
-        {/* LOGO E VERSÃO */}
-        <View style={styles.header}>
-          <View style={styles.logoPlaceholder}>
-            {/* Substitua pelo seu <Image /> real */}
-            <InfoIcon size={40} color={Colors.primary} weight="duotone" />
+        <View style={styles.card}>
+          {/* LOGO E VERSÃO */}
+          <View style={styles.header}>
+            <View style={styles.logoPlaceholder}>
+              {/* Substitua pelo seu <Image /> real */}
+              <InfoIcon size={40} color={Colors.primary} weight="duotone" />
+            </View>
+            <Typo size={22} fontWeight="800">
+              Meu Kwanza Controlo
+            </Typo>
+            <Typo size={14} color="#888">
+              Versão ${appVersion}
+            </Typo>
           </View>
-          <Typo size={22} fontWeight="800">
-            Finance App
-          </Typo>
-          <Typo size={14} color="#888">
-            Versão ${appVersion}
-          </Typo>
-        </View>
 
-        <View style={styles.divider} />
+          <View style={styles.divider} />
 
-        {/* INFO DO DESENVOLVEDOR */}
-        <View style={styles.section}>
-          <Typo size={14} color="#AAA" style={{ marginBottom: 10 }}>
-            Desenvolvido por
-          </Typo>
-          <Typo size={16} fontWeight="600">
-            Seu Nome / Sua Empresa
-          </Typo>
-        </View>
+          {/* INFO DO DESENVOLVEDOR */}
+          <View style={styles.section}>
+            <Typo size={14} color="#AAA" style={{ marginBottom: 10 }}>
+              Desenvolvido por
+            </Typo>
+            <Typo size={16} fontWeight="600">
+              Emanuel Jefté / NGINAX COMPANY
+            </Typo>
+          </View>
 
-        {/* LINKS SOCIAIS / CONTATO */}
-        <View style={styles.footer}>
-          <Pressable
-            style={styles.socialBtn}
-            onPress={() => Linking.openURL("https://github.com")}
-          >
-            <GithubLogoIcon size={24} color="#fff" weight="fill" />
-          </Pressable>
+          {/* LINKS SOCIAIS / CONTATO */}
+          <View style={styles.footer}>
+            <Pressable
+              style={styles.socialBtn}
+              onPress={() => Linking.openURL("https://github.com/emanueljefte")}
+            >
+              <GithubLogoIcon size={24} color="#fff" weight="fill" />
+            </Pressable>
 
-          <Pressable
-            style={styles.socialBtn}
-            onPress={() => Linking.openURL("https://seuwebsite.com")}
-          >
-            <GlobeIcon size={24} color="#fff" weight="fill" />
-          </Pressable>
-        </View>
+            <Pressable
+              style={styles.socialBtn}
+              onPress={() => Linking.openURL("https://seuwebsite.com")}
+            >
+              <GlobeIcon size={24} color="#fff" weight="fill" />
+            </Pressable>
+          </View>
 
-        <View style={styles.copyright}>
-          <CopyrightIcon size={12} color="#666" />
-          <Typo size={12} color="#666">
-            {" "}
-            2026 Todos os direitos reservados.
-          </Typo>
+          <View style={styles.copyright}>
+            <CopyrightIcon size={12} color="#666" />
+            <Typo size={12} color="#666">
+              {" "}
+              2026 Todos os direitos reservados.
+            </Typo>
+          </View>
         </View>
       </View>
-    </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: verticalScale(25),
-    paddingHorizontal: scale(5),
+    marginTop: verticalScale(20),
+    paddingHorizontal: scale(10),
   },
   title: {
     marginBottom: verticalScale(15),

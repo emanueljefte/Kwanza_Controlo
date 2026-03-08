@@ -1,27 +1,30 @@
+import CustomAlert from "@/components/CustomAlert";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Typo from "@/components/Typo";
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/contexts/ThemeContext";
 import { SecurityService } from "@/services/SecurityService";
 import { scale, verticalScale } from "@/utils/styling";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import {
-  Alert,
-  StyleSheet,
-  TouchableOpacity,
-  Vibration,
-  View,
-} from "react-native";
+import { StyleSheet, TouchableOpacity, Vibration, View } from "react-native";
 
 type PinState = "VERIFY_OLD" | "ENTER_NEW" | "CONFIRM_NEW";
 
 export default function PinModal() {
+  const { theme } = useTheme();
   const [pin, setPin] = useState("");
   const [oldPinFromStore, setOldPinFromStore] = useState<string | null>(null);
   const [firstNewPin, setFirstNewPin] = useState("");
   const [currentState, setCurrentState] = useState<PinState>("VERIFY_OLD");
   const [title, setTitle] = useState("PIN Antigo");
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info" as any,
+  });
 
   useEffect(() => {
     async function loadCurrentPin() {
@@ -36,6 +39,14 @@ export default function PinModal() {
     }
     loadCurrentPin();
   }, []);
+
+  const showAlert = (
+    title: string,
+    message: string,
+    type: "success" | "error" = "error",
+  ) => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   const handlePinPress = async (digit: number) => {
     if (pin.length >= 4) return;
@@ -54,7 +65,7 @@ export default function PinModal() {
             setTitle("Digite o Novo PIN");
           } else {
             Vibration.vibrate(100);
-            Alert.alert("Erro", "PIN antigo incorreto!");
+            showAlert("Erro", "PIN antigo incorreto!");
             setPin("");
           }
         } else if (currentState === "ENTER_NEW") {
@@ -65,11 +76,13 @@ export default function PinModal() {
         } else if (currentState === "CONFIRM_NEW") {
           if (newPinEntry === firstNewPin) {
             await SecurityService.savePin(newPinEntry);
-            Alert.alert("Sucesso", "PIN configurado com sucesso!");
-            router.push("/screens/pin");
+            showAlert("Sucesso", "PIN configurado com sucesso!", "success");
+            setTimeout(() => {
+              router.push("/screens/pin");
+            }, 2000);
           } else {
             Vibration.vibrate(100);
-            Alert.alert("Erro", "Os novos PINs não coincidem!");
+            showAlert("Erro", "Os novos PINs não coincidem!");
             setPin("");
             setCurrentState("ENTER_NEW");
             setTitle("Digite o Novo PIN");
@@ -88,6 +101,11 @@ export default function PinModal() {
     <ScreenWrapper style={styles.container}>
       {/* Header com botão de fechar opcional */}
       <View style={styles.header}>
+        <FontAwesome6
+          name="unlock-keyhole"
+          size={scale(40)}
+          color={Colors.warning}
+        />
         <Typo style={styles.heading} fontWeight={"700"} size={22}>
           {title}
         </Typo>
@@ -120,7 +138,11 @@ export default function PinModal() {
             onPress={() => handlePinPress(num)}
             style={styles.keypadButton}
           >
-            <Typo fontWeight={"600"} size={30}>
+            <Typo
+              fontWeight={"600"}
+              size={30}
+              color={theme === "light" ? "#fff" : ""}
+            >
               {num}
             </Typo>
           </TouchableOpacity>
@@ -133,7 +155,11 @@ export default function PinModal() {
           onPress={() => handlePinPress(0)}
           style={styles.keypadButton}
         >
-          <Typo fontWeight={"600"} size={30}>
+          <Typo
+            fontWeight={"600"}
+            size={30}
+            color={theme === "light" ? "#fff" : ""}
+          >
             0
           </Typo>
         </TouchableOpacity>
@@ -145,6 +171,13 @@ export default function PinModal() {
           <FontAwesome6 name="delete-left" size={24} color={Colors.warning} />
         </TouchableOpacity>
       </View>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+      />
     </ScreenWrapper>
   );
 }

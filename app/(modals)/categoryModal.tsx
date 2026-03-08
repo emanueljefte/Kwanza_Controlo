@@ -6,6 +6,7 @@ import ModalWrapper from "@/components/ModalWrapper";
 import Typo from "@/components/Typo";
 import { Colors } from "@/constants/colors";
 import { ICON_CATALOG, INCOME_CATALOG } from "@/constants/icons"; // Importe ambos
+import { useTheme } from "@/contexts/ThemeContext";
 import { scale } from "@/utils/styling";
 import { FlashList } from "@shopify/flash-list";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -16,6 +17,8 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 export default function CategoryModal() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const activeColors = Colors[theme];
   const { type } = useLocalSearchParams(); // Recebe 'expense' ou 'income'
 
   const [search, setSearch] = useState(""); // Estado para a busca
@@ -76,14 +79,17 @@ export default function CategoryModal() {
 
     return (
       <Pressable
-        style={styles.categoryCard}
+        style={[
+          styles.categoryCard,
+          { backgroundColor: activeColors.navBackground },
+        ]}
         onPress={() => handleSelectedCategory(item)}
       >
-        <View style={styles.iconWrapper}>
+        <View style={[styles.iconWrapper]}>
           <DynamicIcon
             name={item.name}
             size={26}
-            color={"white"}
+            color={activeColors.iconColorFocused}
             weight="fill"
           />
         </View>
@@ -91,7 +97,6 @@ export default function CategoryModal() {
           style={{ marginTop: 8, textAlign: "center" }}
           size={12}
           color="#bbb"
-          numberOfLines={1}
         >
           {item.displayName}
         </Typo>
@@ -110,7 +115,7 @@ export default function CategoryModal() {
         />
 
         {/* BARRA DE PESQUISA */}
-        <View style={{ marginBottom: 20 }}>
+        <View style={{ marginTop: 10, marginBottom: 20 }}>
           <Input
             placeholder="Pesquisar categoria..."
             value={search}
@@ -124,12 +129,10 @@ export default function CategoryModal() {
         data={filteredData}
         renderItem={renderItemB}
         numColumns={search.length > 0 ? 3 : 3}
-        estimatedItemSize={100}
         // Ajuste dinâmico do Span para busca
         overrideItemLayout={(layout, item) => {
           if (item.isHeader) {
             layout.span = 3;
-            layout.size = 60;
           }
         }}
         keyExtractor={(item, index) =>
@@ -172,7 +175,6 @@ const styles = StyleSheet.create({
     padding: 12,
     margin: 6,
     borderRadius: 20,
-    backgroundColor: "#1A1A1A",
     borderWidth: 1,
     borderColor: "#262626",
     flex: 1,

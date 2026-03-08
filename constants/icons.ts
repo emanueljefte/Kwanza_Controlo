@@ -1,12 +1,17 @@
 import * as Icons from "phosphor-react-native";
 
+export const transactionType = [
+  { label: "Renda", value: "income" },
+  { label: "Despesa", value: "expense" },
+];
+
 export const ICON_CATALOG = {
   "Essenciais & Casa": [
-    { name: "House", comp: Icons.House, displayName: "Casa" },
-    { name: "Lightbulb", comp: Icons.Lightbulb, displayName: "Luz" },
-    { name: "Drop", comp: Icons.Drop, displayName: "Água" },
-    { name: "WifiHigh", comp: Icons.WifiHigh, displayName: "Internet" },
-    { name: "ShieldCheck", comp: Icons.ShieldCheck, displayName: "Seguro" },
+    { name: "House", comp: Icons.HouseIcon, displayName: "Casa" },
+    { name: "Lightbulb", comp: Icons.LightbulbIcon, displayName: "Luz" },
+    { name: "Drop", comp: Icons.DropIcon, displayName: "Água" },
+    { name: "WifiHigh", comp: Icons.WifiHighIcon, displayName: "Internet" },
+    { name: "ShieldCheck", comp: Icons.ShieldCheckIcon, displayName: "Seguro" },
     { name: "Hammer", comp: Icons.Hammer, displayName: "Reparos" },
   ],
   Alimentação: [

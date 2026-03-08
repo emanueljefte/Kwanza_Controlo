@@ -1,5 +1,6 @@
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useTheme } from "@/contexts/ThemeContext";
 import useFetchData from "@/hooks/useFetchData";
 import { WalletType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
@@ -30,7 +31,8 @@ export default function HomeCard() {
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
-
+  const { theme } = useTheme();
+  const activeColors = Colors[theme];
   useFocusEffect(
     useCallback(() => {
       setRefreshKey((prev) => prev + 1);
@@ -166,6 +168,7 @@ export default function HomeCard() {
           </Typo>
         </View>
       </View>
+
       {/* MODAL DE OPÇÕES */}
       <Modal
         visible={showModal}
@@ -177,7 +180,12 @@ export default function HomeCard() {
           style={styles.modalOverlay}
           onPress={() => setShowModal(false)}
         >
-          <View style={styles.modalContent}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: activeColors.navBackground },
+            ]}
+          >
             <Typo size={18} fontWeight="700" style={{ marginBottom: 15 }}>
               Opções
             </Typo>
@@ -218,7 +226,7 @@ export default function HomeCard() {
                 size={22}
                 color={!selectedWallet ? Colors.primary : "#444"}
               />
-              <Typo color={!selectedWallet ? Colors.primary : "#000"}>
+              <Typo color={!selectedWallet ? Colors.primary : ""}>
                 Todas as Contas
               </Typo>
               {!selectedWallet && (
@@ -240,9 +248,7 @@ export default function HomeCard() {
                 }}
               >
                 <View style={[styles.dot, { backgroundColor: "#ccc" }]} />
-                <Typo
-                  color={selectedWallet?.id === w.id ? Colors.primary : "#000"}
-                >
+                <Typo color={selectedWallet?.id === w.id ? Colors.primary : ""}>
                   {w.name}
                 </Typo>
                 {selectedWallet?.id === w.id && (
@@ -318,9 +324,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "white",
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
+    borderColor: "white",
     padding: scale(20),
     paddingBottom: verticalScale(40),
   },

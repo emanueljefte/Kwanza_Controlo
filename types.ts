@@ -2,12 +2,12 @@
 import Icons from "phosphor-react-native";
 import { ReactNode } from "react";
 import {
-    TextInput,
-    TextInputProps,
-    TextProps,
-    TextStyle,
-    TouchableOpacityProps,
-    ViewStyle,
+  TextInput,
+  TextInputProps,
+  TextProps,
+  TextStyle,
+  TouchableOpacityProps,
+  ViewStyle,
 } from "react-native";
 
 export type ScreenWrapperProps = {
@@ -82,6 +82,7 @@ export type UserType = {
   image?: any;
   is_dirty?: number;
   updated_at?: string;
+  last_login?: string;
 } | null;
 
 export type UserDataType = {
@@ -110,6 +111,7 @@ export type AuthContextType = {
   isAuthenticated: boolean;
   isGuest: boolean;
   isOnline: boolean;
+  isReady: boolean;
 };
 
 export type ResponseType = {

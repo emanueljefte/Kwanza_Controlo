@@ -80,7 +80,10 @@ export default function Register() {
       showAlert("Erro no Registro", res.msg as any);
       return;
     }
-    router.replace("/(auth)/login");
+    setTimeout(() => {
+      showAlert("Registro", "Usuário Cadastrado com sucesso", "success");
+      router.replace("/(auth)/login");
+    }, 2000);
   };
 
   return (

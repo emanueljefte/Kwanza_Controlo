@@ -1,38 +1,20 @@
-import { router, Stack } from "expo-router";
+import { Stack } from "expo-router";
 
 import { AuthProvider, useAuth } from "@/contexts/AuthProvider";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import migrations from "@/drizzle/migrations";
 import "@/global.css";
-import { SecurityService } from "@/services/SecurityService";
 import { drizzle } from "drizzle-orm/expo-sqlite";
 import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
 import { openDatabaseSync, SQLiteProvider } from "expo-sqlite";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { ActivityIndicator } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 const InitialLayout = () => {
   const { isAuthenticated } = useAuth();
-  const [isLocked, setIsLocked] = useState(true);
+
   const [appReady, setAppReady] = useState(false);
-
-  useEffect(() => {
-    async function checkSecurity() {
-      const pinExists = await SecurityService.hasPin();
-
-      if (pinExists) {
-        setIsLocked(true);
-        // Redireciona para a tela de PIN, mas mantém o estado bloqueado
-        router.replace("/(auth)/pin-lock");
-      } else {
-        setIsLocked(false);
-        router.replace("/(auth)/welcome");
-      }
-      setAppReady(true);
-    }
-    checkSecurity();
-  }, []);
 
   return (
     <>

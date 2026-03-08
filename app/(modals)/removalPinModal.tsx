@@ -1,34 +1,51 @@
+import CustomAlert from "@/components/CustomAlert";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Typo from "@/components/Typo";
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/contexts/ThemeContext";
 import { SecurityService } from "@/services/SecurityService";
 import { scale, verticalScale } from "@/utils/styling";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    StyleSheet,
-    TouchableOpacity,
-    Vibration,
-    View,
+  Alert,
+  StyleSheet,
+  TouchableOpacity,
+  Vibration,
+  View,
 } from "react-native";
 
 export default function RemovalPinModal() {
+  const { theme } = useTheme();
   const [pin, setPin] = useState("");
   const [savedPin, setSavedPin] = useState<string | null>(null);
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info" as any,
+  });
 
   useEffect(() => {
     async function loadPin() {
       const pinFromStore = await SecurityService.getPin();
       if (!pinFromStore) {
-        Alert.alert("Aviso", "Não existe um PIN definido.");
+        showAlert("Aviso", "Não existe um PIN definido.");
         router.back();
       }
       setSavedPin(pinFromStore);
     }
     loadPin();
   }, []);
+
+  const showAlert = (
+    title: string,
+    message: string,
+    type: "success" | "error" = "error",
+  ) => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   const handlePinPress = (digit: number) => {
     if (pin.length >= 4) return;
@@ -43,7 +60,7 @@ export default function RemovalPinModal() {
           confirmRemoval();
         } else {
           Vibration.vibrate(100);
-          Alert.alert("Erro", "PIN incorreto!");
+          showAlert("Erro", "PIN incorreto!");
           setPin("");
         }
       }, 100);
@@ -112,7 +129,11 @@ export default function RemovalPinModal() {
             onPress={() => handlePinPress(num)}
             style={styles.keypadButton}
           >
-            <Typo fontWeight={"600"} size={30}>
+            <Typo
+              fontWeight={"600"}
+              size={30}
+              color={theme === "light" ? "#fff" : ""}
+            >
               {num}
             </Typo>
           </TouchableOpacity>
@@ -123,7 +144,11 @@ export default function RemovalPinModal() {
           onPress={() => handlePinPress(0)}
           style={styles.keypadButton}
         >
-          <Typo fontWeight={"600"} size={30}>
+          <Typo
+            fontWeight={"600"}
+            size={30}
+            color={theme === "light" ? "#fff" : ""}
+          >
             0
           </Typo>
         </TouchableOpacity>
@@ -134,6 +159,13 @@ export default function RemovalPinModal() {
           <FontAwesome6 name="delete-left" size={24} color={Colors.warning} />
         </TouchableOpacity>
       </View>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+      />
     </ScreenWrapper>
   );
 }
@@ -142,7 +174,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "space-around",
+    justifyContent: "space-evenly",
     paddingVertical: verticalScale(30),
   },
   header: {
@@ -158,7 +190,7 @@ const styles = StyleSheet.create({
   pinContainer: {
     flexDirection: "row",
     gap: scale(20),
-    marginVertical: verticalScale(20),
+    marginVertical: verticalScale(10),
   },
   pinDigit: {
     width: scale(18),

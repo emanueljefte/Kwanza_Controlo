@@ -2,6 +2,8 @@ import BackButton from "@/components/BackButton";
 import Header from "@/components/Header";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Typo from "@/components/Typo";
+import { Colors } from "@/constants/colors";
+import { useTheme } from "@/contexts/ThemeContext";
 import { accountOptionsType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
 import { FontAwesome6 } from "@expo/vector-icons"; // Ícones mais modernos
@@ -12,6 +14,8 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 
 export default function Settings() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const activeColors = Colors[theme];
 
   const accountOptions: accountOptionsType[] = [
     {
@@ -51,11 +55,18 @@ export default function Settings() {
       <View style={styles.container}>
         <Header
           title="Configurações"
-          leftIcon={<BackButton />}
+          leftIcon={
+            <BackButton onPress={() => router.push("/(tabs)/profile")} />
+          }
           style={{ marginBottom: verticalScale(20) }}
         />
 
-        <View style={styles.sectionContainer}>
+        <View
+          style={[
+            styles.sectionContainer,
+            { backgroundColor: activeColors.border },
+          ]}
+        >
           {accountOptions.map((item, index) => (
             <Animated.View
               key={index.toString()}
@@ -106,11 +117,11 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: verticalScale(20),
     flex: 1,
     paddingHorizontal: scale(20),
   },
   sectionContainer: {
-    backgroundColor: "#1A1A1A", // Um pouco mais claro que o fundo principal para contraste
     borderRadius: 22,
     borderWidth: 1,
     borderColor: "#262626",

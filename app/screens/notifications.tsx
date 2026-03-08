@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Typo from "@/components/Typo";
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/contexts/ThemeContext";
 import { NotificationRepo } from "@/db/repository";
 import * as schema from "@/db/schema";
 import { NotificationRecord } from "@/db/schema";
@@ -14,15 +15,18 @@ import { router, useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    FlatList,
-    StyleSheet,
-    Switch,
-    TouchableOpacity,
-    View,
+  FlatList,
+  StyleSheet,
+  Switch,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
+  const { theme } = useTheme();
+  const activeColors = Colors[theme];
+
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
   const [refreshKey, setRefreshKey] = useState(0);
@@ -54,7 +58,12 @@ export default function Notifications() {
   };
 
   const renderNotification = ({ item }: { item: NotificationRecord }) => (
-    <View style={styles.notificationCard}>
+    <View
+      style={[
+        styles.notificationCard,
+        { backgroundColor: activeColors.border },
+      ]}
+    >
       <View style={styles.cardInfo}>
         <Typo size={18} fontWeight="600">
           {item.title}

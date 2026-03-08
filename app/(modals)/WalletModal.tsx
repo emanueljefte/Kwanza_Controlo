@@ -1,5 +1,6 @@
 import BackButton from "@/components/BackButton";
 import Button from "@/components/ButtonLayout";
+import CustomAlert from "@/components/CustomAlert";
 import Header from "@/components/Header";
 import Input from "@/components/Input";
 import ModalWrapper from "@/components/ModalWrapper";
@@ -7,7 +8,7 @@ import Typo from "@/components/Typo";
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthProvider";
 import * as schema from "@/db/schema";
-import { createOrUpdateWallet } from "@/services/walletService";
+import { createOrUpdateWallet, deleteWallet } from "@/services/walletService";
 import { WalletType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
 import { FontAwesome, FontAwesome6 } from "@expo/vector-icons"; // Adicionado FontAwesome6
@@ -36,6 +37,13 @@ const WALLET_ICONS = [
 export default function WalletModal() {
   const { user } = useAuth();
   const router = useRouter();
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info" as any,
+  });
+
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
   const { id, name, image } = useLocalSearchParams();
@@ -57,10 +65,18 @@ export default function WalletModal() {
     }
   }, [id, name, image]);
 
+  const showAlert = (
+    title: string,
+    message: string,
+    type: "success" | "error" = "error",
+  ) => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
+
   const onSubmit = async () => {
     let { name, image } = wallet;
     if (!name?.trim() || !image) {
-      Alert.alert("Carteira", "Por favor, dê um nome à sua carteira");
+      showAlert("Carteira", "Por favor, dê um nome à sua carteira");
       return;
     }
 
@@ -77,7 +93,38 @@ export default function WalletModal() {
     setLoading(false);
 
     if (res.success) router.back();
-    else Alert.alert("Erro", res.msg);
+    else showAlert("Erro", res.msg as string);
+  };
+
+  const onDelete = async () => {
+    if (!id) return;
+    setLoading(true);
+    const res = await deleteWallet(drizzleDb, Number(id));
+    setLoading(false);
+    if (res.success) {
+      router.back();
+    } else {
+      Alert.alert("Wallet", res.msg);
+    }
+  };
+
+  const showDeleteAlert = () => {
+    Alert.alert(
+      "Confirmação",
+      "Tens ceteza que pretendes realizar isto? \nEsta ação removerá todas as transações relacionadas com este cartão",
+      [
+        {
+          text: "Cancelar",
+          onPress: () => console.log("Deletar cancelado"),
+          style: "cancel",
+        },
+        {
+          text: "Deletar",
+          onPress: () => onDelete(),
+          style: "destructive",
+        },
+      ],
+    );
   };
 
   return (
@@ -136,9 +183,7 @@ export default function WalletModal() {
           {id && (
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={() => {
-                /* lógica de delete alert */
-              }}
+              onPress={showDeleteAlert}
               disabled={loading}
             >
               <FontAwesome name="trash" color={Colors.warning} size={22} />
@@ -156,6 +201,13 @@ export default function WalletModal() {
           </Button>
         </View>
       </View>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+      />
     </ModalWrapper>
   );
 }

@@ -20,7 +20,7 @@ import { drizzle } from "drizzle-orm/expo-sqlite";
 import { useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import * as Icons from "phosphor-react-native";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -42,16 +42,11 @@ export default function Statistic() {
   const drizzleDb = drizzle(db, { schema });
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Recarrega os dados ao focar na tela
   useFocusEffect(
     useCallback(() => {
-      setRefreshKey((prev) => prev + 1);
-    }, []),
+      fetchStats(); // Chama direto aqui ao ganhar foco
+    }, [activeIndex]), // Se mudar o index enquanto está em foco, ele não precisa do refreshKey
   );
-
-  useEffect(() => {
-    fetchStats();
-  }, [activeIndex, refreshKey]);
 
   const fetchStats = async () => {
     setChartLoading(true);
@@ -74,17 +69,21 @@ export default function Statistic() {
   // Memoize os dados da pizza para evitar cálculos desnecessários
   const pieData = useMemo(() => {
     const categories: any = {};
+
+    // Filtra despesas e soma por categoria
     transactions
       .filter((t) => t.type === "expense")
       .forEach((t) => {
-        categories[t.category!] =
-          (categories[t.category!] || 0) + Number(t.amount);
+        const cat = t.category || "Outros";
+        categories[cat] = (categories[cat] || 0) + Number(t.amount);
       });
 
     return Object.keys(categories).map((key) => ({
       value: categories[key],
       label: key,
+      // GARANTA QUE A COR SEJA ATRIBUÍDA AQUI
       color: getRandomColor(key),
+      gradientCenterColor: getRandomColor(key), // Opcional: para um visual melhor com gradiente
       text: key,
     }));
   }, [transactions]);
@@ -141,14 +140,14 @@ export default function Statistic() {
               </Typo>
               <View style={styles.chartTypeToggle}>
                 <TouchableOpacity onPress={() => setChartType("bar")}>
-                  <Icons.ChartBar
+                  <Icons.ChartBarIcon
                     size={22}
                     weight={chartType === "bar" ? "fill" : "regular"}
                     color={chartType === "bar" ? Colors.primary : "#666"}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setChartType("pie")}>
-                  <Icons.ChartPie
+                  <Icons.ChartPieIcon
                     size={22}
                     weight={chartType === "pie" ? "fill" : "regular"}
                     color={chartType === "pie" ? Colors.primary : "#666"}
@@ -253,13 +252,15 @@ export default function Statistic() {
               )}
             </View>
           </View>
-
-          {/* Lista de Transações */}
-          <TransitionList
-            title="Transações do Período"
-            emptyListMessage="Nenhuma transação encontrada"
-            data={transactions}
-          />
+          {chartLoading ? (
+            <Loading />
+          ) : (
+            <TransitionList
+              title="Transações do Período"
+              emptyListMessage="Nenhuma transação encontrada"
+              data={transactions}
+            />
+          )}
         </ScrollView>
       </View>
     </ScreenWrapper>

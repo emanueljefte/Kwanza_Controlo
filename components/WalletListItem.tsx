@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/contexts/ThemeContext";
 import { WalletType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
 import { FontAwesome6 } from "@expo/vector-icons"; // Atualizado para FontAwesome6
@@ -7,8 +8,7 @@ import React from "react";
 import {
   StyleSheet,
   TouchableOpacity,
-  useColorScheme,
-  View,
+  View
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Typo from "./Typo";
@@ -22,8 +22,8 @@ export default function WalletListItem({
   index: number;
   router: Router;
 }) {
-  const colorSchema = useColorScheme();
-  const theme = Colors[colorSchema!] ?? Colors.dark;
+  const { theme } = useTheme();
+  const activeColors = Colors[theme] ?? Colors.dark;
 
   const openWallet = () => {
     router.push({
@@ -48,7 +48,7 @@ export default function WalletListItem({
       entering={FadeInDown.delay(index * 100).damping(13)}
       style={[
         styles.container,
-        { backgroundColor: theme.uiBackground || "#1F1F1F" },
+        { backgroundColor: activeColors.uiBackground || "#1F1F1F" },
       ]}
     >
       <TouchableOpacity

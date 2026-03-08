@@ -1,7 +1,9 @@
 import { Colors } from "@/constants/colors";
+import { useAuth } from "@/contexts/AuthProvider";
 import { useTheme } from "@/contexts/ThemeContext";
+import { SecurityService } from "@/services/SecurityService";
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, {
   FadeIn,
@@ -14,8 +16,11 @@ import Animated, {
 } from "react-native-reanimated";
 
 export default function Index() {
-  const router = useRouter();
+  const { isAuthenticated, isReady } = useAuth();
   const { theme } = useTheme();
+  const [isLocked, setIsLocked] = useState(true);
+  const [animationFinished, setAnimationFinished] = useState(false);
+  const router = useRouter();
   const activeColors = Colors[theme];
 
   // Efeito de pulso suave na logo
@@ -34,11 +39,34 @@ export default function Index() {
 
     // Redireciona após 2.5 segundos
     const timer = setTimeout(() => {
-      router.replace("/(auth)/welcome"); // Use replace para o usuário não voltar ao splash
+      setAnimationFinished(true);
     }, 2500);
+    setAnimationFinished(true);
 
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    // Só redireciona se a animação acabou E o AuthProvider carregou o DB
+    async function check() {
+      const pinExists = await SecurityService.hasPin();
+      if (animationFinished && isReady) {
+        if (isAuthenticated) {
+          if (pinExists) {
+            setIsLocked(true);
+            // Redireciona para a tela de PIN, mas mantém o estado bloqueado
+            router.replace("/(auth)/pin-lock");
+          } else {
+            setIsLocked(false);
+            router.replace("/(tabs)");
+          }
+        } else {
+          router.replace("/(auth)/welcome");
+        }
+      }
+    }
+    check();
+  }, [animationFinished, isReady, isAuthenticated]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],

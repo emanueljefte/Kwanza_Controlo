@@ -15,7 +15,7 @@ import {
   Pressable,
   StyleSheet,
   TouchableWithoutFeedback,
-  View,
+  View
 } from "react-native";
 
 export default function Login() {
@@ -163,6 +163,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: scale(24),
+  },
+  scrollContainer: {
+    paddingBottom: verticalScale(40),
   },
   header: {
     marginTop: verticalScale(20),

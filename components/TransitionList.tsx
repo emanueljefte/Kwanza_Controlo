@@ -1,5 +1,6 @@
 import { Colors } from "@/constants/colors";
 import { findCategoryInCatalog } from "@/constants/icons";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   TransactionItemProps,
   TransactionListType,
@@ -9,12 +10,7 @@ import { scale, verticalScale } from "@/utils/styling";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import React from "react";
-import {
-  StyleSheet,
-  TouchableOpacity,
-  useColorScheme,
-  View,
-} from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Loading from "./Loading";
 import Typo from "./Typo";
@@ -29,7 +25,6 @@ export default function TransitionList({
     router.push({
       pathname: "/(modals)/transactionModel",
       params: {
-        /* seus params aqui... */
         ...item,
         amount: item.amount.toString(),
         date:
@@ -91,8 +86,8 @@ export const TransactionItem = ({
   index,
   handleClick,
 }: TransactionItemProps) => {
-  const colorSchema = useColorScheme();
-  const themeColors = Colors[colorSchema!] ?? Colors.dark;
+  const { theme } = useTheme();
+  const themeColors = Colors[theme!] ?? Colors.dark;
 
   // Busca o ícone e o nome de exibição no catálogo baseado no item.category (que guarda o 'name')
   const categoryInfo = React.useMemo(() => {
@@ -119,11 +114,7 @@ export const TransactionItem = ({
   const brandColor = item.type === "income" ? "#10b981" : "#ef4444";
 
   return (
-    <Animated.View
-      entering={FadeInDown.delay(index * 50)
-        .springify()
-        .damping(15)}
-    >
+    <Animated.View entering={FadeInDown.delay(index * 50).damping(15)}>
       <TouchableOpacity
         activeOpacity={0.7}
         style={[styles.row, { backgroundColor: themeColors.uiBackground }]}
@@ -181,6 +172,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: verticalScale(12),
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.13)",
     marginBottom: verticalScale(10),
     // Sombra leve para efeito de card
     shadowColor: "#000",

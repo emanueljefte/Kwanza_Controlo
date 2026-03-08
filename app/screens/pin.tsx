@@ -29,7 +29,9 @@ export default function Pin() {
       <View style={styles.container}>
         <Header
           title="Segurança"
-          leftIcon={<BackButton />}
+          leftIcon={
+            <BackButton onPress={() => router.replace("/screens/settings")} />
+          }
           style={{ marginBottom: verticalScale(10) }}
         />
 

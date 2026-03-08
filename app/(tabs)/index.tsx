@@ -8,7 +8,7 @@ import useFetchData from "@/hooks/useFetchData";
 import { TransactionType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
 import { useFocusEffect, useRouter } from "expo-router";
-import { MagnifyingGlass, Plus } from "phosphor-react-native";
+import { MagnifyingGlassIcon, PlusIcon } from "phosphor-react-native";
 import React, { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 
@@ -64,7 +64,7 @@ export default function Home() {
             style={styles.searchButton}
             activeOpacity={0.7}
           >
-            <MagnifyingGlass
+            <MagnifyingGlassIcon
               size={verticalScale(22)}
               color={Colors.primary}
               weight="bold"
@@ -101,7 +101,7 @@ export default function Home() {
           onPress={() => router.push("/(modals)/transactionModel")}
           activeOpacity={0.9}
         >
-          <Plus color={"#fff"} size={verticalScale(30)} weight="bold" />
+          <PlusIcon color={"#fff"} size={verticalScale(30)} weight="bold" />
         </TouchableOpacity>
       </View>
     </ScreenWrapper>
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     paddingBottom: verticalScale(20),
   },
   cardWrapper: {
-    marginBottom: verticalScale(30),
+    marginBottom: verticalScale(20),
   },
   listWrapper: {
     flex: 1,

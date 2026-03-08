@@ -34,7 +34,9 @@ CREATE TABLE `users` (
 	`password` text,
 	`image` text,
 	`is_dirty` integer DEFAULT 0,
-	`updated_at` text
+	`created_at` text DEFAULT '2026-03-05T02:18:07.802Z',
+	`updated_at` text DEFAULT '2026-03-05T02:18:07.803Z',
+	`last_login` text DEFAULT '2026-03-05T02:18:07.803Z'
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);--> statement-breakpoint

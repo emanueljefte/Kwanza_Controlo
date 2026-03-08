@@ -7,9 +7,9 @@ import { Dimensions, Platform, View } from "react-native";
 const { height } = Dimensions.get("window");
 
 const ScreenWrapper = ({ style, children }: ScreenWrapperProps) => {
-  const { theme, mode, setMode } = useTheme();
+  const { theme } = useTheme();
   const activeColors = Colors[theme];
-  let paddingVertical = Platform.OS == "ios" ? height * 0.06 : 30;
+  let paddingTop = Platform.OS == "ios" ? height * 0.06 : 30;
 
   return (
     <View
@@ -17,8 +17,8 @@ const ScreenWrapper = ({ style, children }: ScreenWrapperProps) => {
       style={[
         style,
         {
-          paddingVertical,
-          backgroundColor: activeColors.background,
+          paddingTop,
+          backgroundColor: style?.backgroundColor ?? activeColors.background,
         },
       ]}
     >

@@ -1,16 +1,15 @@
 export const Colors = {
-  // Extraído diretamente da logo
-  primary: "#F97316", // Laranja principal
-  secondary: "#228B22", // Verde do "check" para ações de sucesso/ganhos
-  warning: "#EF4444", // Um vermelho mais vivo para alertas de gastos
-  gray: "#404040", // O cinza chumbo do texto "CONTROLADO"
+  primary: "#F97316",
+  secondary: "#228B22",
+  warning: "#EF4444",
+  gray: "#404040",
 
   dark: {
     text: "#A1A1AA",
     title: "#FFFFFF",
-    background: "#09090B", // Um preto levemente mais profundo
+    background: "#09090B",
     navBackground: "#18181B",
-    iconColor: "#F97316", // Ícones seguindo a marca
+    iconColor: "#F97316",
     iconColorFocused: "#FFFFFF",
     uiBackground: "transparent",
     inputColor: "#FFFFFF",
@@ -20,10 +19,10 @@ export const Colors = {
   light: {
     text: "#4B5563",
     title: "#1F2937",
-    background: "#F8FAFC", // Um fundo "off-white" mais limpo que o roxo anterior
+    background: "#F8FAFC",
     navBackground: "#FFFFFF",
     iconColor: "#9CA3AF",
-    iconColorFocused: "#F97316", // Destaque para o item ativo no menu
+    iconColorFocused: "#F97316",
     uiBackground: "#FFFFFF",
     inputColor: "#111827",
     border: "#E5E7EB",

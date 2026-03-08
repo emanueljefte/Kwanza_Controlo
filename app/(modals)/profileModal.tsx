@@ -1,5 +1,6 @@
 import BackButton from "@/components/BackButton";
 import Button from "@/components/ButtonLayout";
+import CustomAlert from "@/components/CustomAlert";
 import Header from "@/components/Header";
 import Input from "@/components/Input";
 import ModalWrapper from "@/components/ModalWrapper";
@@ -11,7 +12,7 @@ import { getProfileImage } from "@/services/imageService";
 import { updateUser } from "@/services/userService";
 import { UserDataType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
-import { FontAwesome6 } from "@expo/vector-icons"; // FontAwesome6 para ícones mais finos
+import { FontAwesome6 } from "@expo/vector-icons";
 import { drizzle } from "drizzle-orm/expo-sqlite";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -19,21 +20,27 @@ import { useRouter } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 export default function ProfileModal() {
-  const { user, updateUserData, setUser } = useAuth();
+  const { user, setUser } = useAuth();
   const [userData, setUserData] = useState<UserDataType>({
     name: "",
     image: null,
   });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info" as any,
+  });
+
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
 
@@ -43,6 +50,14 @@ export default function ProfileModal() {
       image: user?.image || null,
     });
   }, [user]);
+
+  const showAlert = (
+    title: string,
+    message: string,
+    type: "success" | "error" = "error",
+  ) => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   const onPickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -59,7 +74,7 @@ export default function ProfileModal() {
   const onSubmit = async () => {
     let { name } = userData;
     if (!name.trim()) {
-      Alert.alert("Erro", "O nome não pode estar vazio.");
+      showAlert("Erro", "O nome não pode estar vazio.");
       return;
     }
     setLoading(true);
@@ -71,11 +86,10 @@ export default function ProfileModal() {
 
     if (res.success) {
       setUser(userData);
-      // updateUserData(drizzleDb, user?.uid as string);
       router.replace("/(tabs)/profile");
     } else {
       setLoading(false);
-      Alert.alert("Erro", res.msg);
+      showAlert("Erro", res.msg as string);
     }
   };
 
@@ -148,6 +162,13 @@ export default function ProfileModal() {
           </Typo>
         </Button>
       </View>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+      />
     </ModalWrapper>
   );
 }

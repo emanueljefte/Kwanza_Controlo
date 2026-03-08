@@ -1,9 +1,9 @@
 import * as schema from "@/db/schema";
 import { AuthContextType, UserType } from "@/types";
 import NetInfo from "@react-native-community/netinfo";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/expo-sqlite";
-// import * as Crypto from "expo-crypto"; // Para gerar UIDs únicos offline
+import * as Crypto from "expo-crypto"; // Para gerar UIDs únicos offline
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useSQLiteContext } from "expo-sqlite";
@@ -21,7 +21,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserType | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   const router = useRouter();
   const db = useSQLiteContext();
@@ -34,24 +35,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  // 🚀 Carregar usuário local ao iniciar
   useEffect(() => {
     const loadUser = async () => {
-      const localUsers = await drizzleDb.query.users.findMany();
+      try {
+        const localUsers = await drizzleDb
+          .select()
+          .from(schema.users)
+          .orderBy(desc(schema.users.last_login))
+          .limit(1);
 
-      if (localUsers.length > 0) {
-        const localUser = localUsers[0];
-        setUser(localUser as any);
-        setIsAuthenticated(true);
-        setIsGuest(localUser.uid === "guest");
+        if (localUsers.length > 0) {
+          const localUser = localUsers[0];
 
-        // Se estiver online e não for convidado, tenta sincronizar em background
-        if (isOnline && localUser.uid !== "guest") {
-          syncDataWithServer(localUser.uid);
+          await drizzleDb
+            .update(schema.users)
+            .set({ last_login: new Date().toISOString() })
+            .where(eq(schema.users.uid, localUser.uid));
+
+          setUser(localUser as any);
+          setIsAuthenticated(true);
+          setIsGuest(localUser.uid === "guest");
+
+          if (isOnline && localUser.uid !== "guest") {
+            syncDataWithServer(localUser.uid);
+          }
         }
-        router.replace("/(tabs)");
-      } else {
-        router.replace("/(auth)/welcome");
+      } catch (e) {
+        console.error("Erro ao carregar usuário", e);
+      } finally {
+        setIsReady(true); // 👈 Terminou o processo (sucesso ou erro)
       }
     };
     loadUser();
@@ -66,12 +78,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       image: null,
       is_dirty: 0,
       updated_at: new Date().toISOString(),
+      last_login: new Date().toISOString(),
     };
 
     await drizzleDb
       .insert(schema.users)
       .values(guestUser as any)
       .onConflictDoNothing();
+
     setUser(guestUser);
     setIsAuthenticated(true);
     setIsGuest(true);
@@ -89,19 +103,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { success: false, msg: "E-mail já registrado." };
 
       // 🔐 1. Transformar a senha em um HASH (Segurança)
-      // Não guardamos "123456", guardamos "a665a45920422f9d..."
-      // const passwordHash = await Crypto.digestStringAsync(
-      //   Crypto.CryptoDigestAlgorithm.SHA256,
-      //   password,
-      // );
+      const passwordHash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        password,
+      );
 
       const newUser = {
-        // uid: Crypto.randomUUID(),
-        uid: "2",
+        uid: Crypto.randomUUID(),
         name,
         email,
-        // password: passwordHash,
-        password,
+        password: passwordHash,
         is_dirty: 1,
         updated_at: new Date().toISOString(),
       };
@@ -124,12 +135,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const u = local[0];
 
         // 🔐 2. Verificar a senha offline
-        // const inputPasswordHash = await Crypto.digestStringAsync(
-        //   Crypto.CryptoDigestAlgorithm.SHA256,
-        //   password,
-        // );
+        const inputPasswordHash = await Crypto.digestStringAsync(
+          Crypto.CryptoDigestAlgorithm.SHA256,
+          password,
+        );
 
-        if (u.password === password) {
+        if (u.password === inputPasswordHash) {
+          await drizzleDb
+            .update(schema.users)
+            .set({ last_login: new Date().toISOString() })
+            .where(eq(schema.users.uid, u.uid));
+
           setUser(u as any);
           setIsAuthenticated(true);
           return { success: true };
@@ -233,7 +249,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     await SecureStore.deleteItemAsync("token");
-    await drizzleDb.delete(schema.users);
+    // await drizzleDb.delete(schema.users);
     setUser(null);
     setIsAuthenticated(false);
     setIsGuest(false);
@@ -252,6 +268,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated,
         isGuest,
         isOnline,
+        isReady,
       }}
     >
       {children}

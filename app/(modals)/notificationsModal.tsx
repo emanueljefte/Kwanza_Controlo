@@ -1,5 +1,6 @@
 import BackButton from "@/components/BackButton";
 import Button from "@/components/ButtonLayout";
+import CustomAlert from "@/components/CustomAlert";
 import Header from "@/components/Header";
 import Input from "@/components/Input";
 import ModalWrapper from "@/components/ModalWrapper";
@@ -7,11 +8,12 @@ import Typo from "@/components/Typo";
 import { Colors } from "@/constants/colors";
 import { frequencyNotification as frequency } from "@/constants/data_notification";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useTheme } from "@/contexts/ThemeContext";
 import * as schema from "@/db/schema";
 import {
   deleteNotification,
   syncNotification,
-} from "@/services/notificationService"; // Certifica-te de ter o deleteNotification
+} from "@/services/notificationService";
 import { NotificationType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
 import { FontAwesome6 } from "@expo/vector-icons";
@@ -33,6 +35,9 @@ import { Dropdown } from "react-native-element-dropdown";
 
 export default function NotificationsModal() {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const activeColors = Colors[theme];
+
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
   const params = useLocalSearchParams<{
@@ -47,6 +52,20 @@ export default function NotificationsModal() {
   const [loading, setLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info" as any,
+  });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    type: "success" | "error" = "error",
+  ) => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   const getInitialTime = () => {
     const date = new Date();
@@ -58,7 +77,7 @@ export default function NotificationsModal() {
     title: "",
     frequency: 1,
     schedule_date: new Date(),
-    schedule_time: getInitialTime(), // Usa a função acima
+    schedule_time: getInitialTime(),
     body: "",
     user: user?.uid,
   });
@@ -120,7 +139,7 @@ export default function NotificationsModal() {
     combinedDate.setHours(sTime.getHours(), sTime.getMinutes(), 0, 0);
 
     if (combinedDate < new Date()) {
-      Alert.alert(
+      showAlert(
         "Data Inválida",
         "Não podes agendar um lembrete para um horário que já passou.",
       );
@@ -128,7 +147,7 @@ export default function NotificationsModal() {
     }
 
     if (!title.trim()) {
-      Alert.alert(
+      showAlert(
         "Campo Obrigatório",
         "Por favor, insira um título para o lembrete.",
       );
@@ -152,7 +171,7 @@ export default function NotificationsModal() {
       await syncNotification(drizzleDb, notificationData);
       router.back();
     } catch (error) {
-      Alert.alert("Erro", "Não foi possível guardar a notificação.");
+      showAlert("Erro", "Não foi possível guardar a notificação.");
     } finally {
       setLoading(false);
     }
@@ -166,7 +185,7 @@ export default function NotificationsModal() {
       await deleteNotification(drizzleDb, params.id, user?.uid as string);
       router.back();
     } catch (error) {
-      Alert.alert("Erro", "Não foi possível eliminar a notificação.");
+      showAlert("Erro", "Não foi possível eliminar a notificação.");
     } finally {
       setLoading(false);
     }
@@ -186,9 +205,7 @@ export default function NotificationsModal() {
         >
           {/* TÍTULO */}
           <View style={styles.inputGap}>
-            <Typo color={"#bbb"} size={16}>
-              Título
-            </Typo>
+            <Typo size={16}>Título</Typo>
             <Input
               placeholder="Ex: Pagar a renda"
               value={notification.title}
@@ -200,13 +217,14 @@ export default function NotificationsModal() {
 
           {/* FREQUÊNCIA */}
           <View style={styles.inputGap}>
-            <Typo color={"#bbb"} size={16}>
-              Repetir
-            </Typo>
+            <Typo size={16}>Repetir</Typo>
             <Dropdown
               style={styles.dropdownContainer}
               placeholderStyle={styles.dropdownPlaceholder}
-              selectedTextStyle={styles.dropdownSelectedText}
+              selectedTextStyle={[
+                styles.dropdownSelectedText,
+                { color: activeColors.title },
+              ]}
               data={frequency}
               labelField={"label"}
               valueField={"value"}
@@ -214,8 +232,11 @@ export default function NotificationsModal() {
               onChange={(item) =>
                 setNotification({ ...notification, frequency: item.value })
               }
-              containerStyle={styles.dropdownListContainer}
-              itemTextStyle={{ color: "#fff" }}
+              containerStyle={[
+                styles.dropdownListContainer,
+                { backgroundColor: activeColors.background },
+              ]}
+              itemTextStyle={{ color: activeColors.title }}
               activeColor={Colors.primary + "40"}
             />
           </View>
@@ -257,9 +278,7 @@ export default function NotificationsModal() {
 
           {/* DESCRIÇÃO */}
           <View style={styles.inputGap}>
-            <Typo color={"#bbb"} size={16}>
-              Notas (Opcional)
-            </Typo>
+            <Typo size={16}>Notas (Opcional)</Typo>
             <Input
               multiline
               placeholder="Detalhes adicionais..."
@@ -321,6 +340,13 @@ export default function NotificationsModal() {
           </Typo>
         </Button>
       </View>
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+      />
     </ModalWrapper>
   );
 }
@@ -338,7 +364,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     height: verticalScale(54),
     alignItems: "center",
-    borderColor: Colors.primary,
+    borderColor: "#333",
     borderWidth: 1.5,
     borderRadius: 15,
     paddingHorizontal: scale(15),
@@ -348,14 +374,13 @@ const styles = StyleSheet.create({
     height: verticalScale(54),
     borderRadius: 15,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: "#333",
     paddingHorizontal: scale(15),
   },
   dropdownListContainer: {
-    backgroundColor: "#1A1A1A",
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: "#333",
   },
   dropdownSelectedText: { color: "#fff", fontSize: 14 },
   dropdownPlaceholder: { color: "#666", fontSize: 14 },

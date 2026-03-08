@@ -307,6 +307,8 @@ export const fetchWeeklyStats = async (
     const today = new Date();
     const sevenDayAgo = new Date(today);
     sevenDayAgo.setDate(today.getDate() - 7);
+    sevenDayAgo.setHours(0, 0, 0, 0)
+    today.setHours(23, 59, 59, 999)
 
     const transationsQuery = await db
       .select()
@@ -383,6 +385,8 @@ export const fetchMonthlyStats = async (
     const today = new Date();
     const twelveMonthsAgo = new Date(today);
     twelveMonthsAgo.setMonth(today.getMonth() - 12);
+    twelveMonthsAgo.setHours(0, 0, 0, 0)
+    today.setHours(23, 59, 59, 999)
 
     const transationsQuery = await db
       .select()

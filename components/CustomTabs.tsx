@@ -4,7 +4,14 @@ import { scale, verticalScale } from "@/utils/styling";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import * as Icons from "phosphor-react-native";
 import React from "react";
-import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  Dimensions,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+const { height } = Dimensions.get("window");
 
 export default function CustomTabs({
   state,
@@ -41,6 +48,7 @@ export default function CustomTabs({
       style={[
         styles.tabContainer,
         {
+          marginBottom: Platform.OS == "ios" ? height * 0.06 : 30,
           backgroundColor: activeColors.background,
           borderTopColor: theme === "dark" ? "#333" : "#eee",
         },
@@ -99,10 +107,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     width: "100%",
     borderTopWidth: 1,
-    // Altura ajustada para acomodar o Safe Area manualmente para melhor controle
-    height: Platform.OS === "ios" ? verticalScale(85) : verticalScale(65),
+    height: Platform.OS === "ios" ? verticalScale(85) : verticalScale(75),
     paddingBottom:
-      Platform.OS === "ios" ? verticalScale(20) : verticalScale(10),
+      Platform.OS === "ios" ? verticalScale(20) : verticalScale(30),
     justifyContent: "space-around",
     alignItems: "center",
     // Sombra leve

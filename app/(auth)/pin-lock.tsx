@@ -1,10 +1,11 @@
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Typo from "@/components/Typo";
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/contexts/ThemeContext";
 import { SecurityService } from "@/services/SecurityService";
 import { scale, verticalScale } from "@/utils/styling";
 import { FontAwesome6 } from "@expo/vector-icons";
-// import * as LocalAuthentication from "expo-local-authentication"; // Para Biometria
+import * as LocalAuthentication from "expo-local-authentication"; // Para Biometria
 import { useRouter } from "expo-router";
 import { ShieldCheckeredIcon } from "phosphor-react-native";
 import React, { useEffect, useState } from "react";
@@ -18,6 +19,7 @@ import {
 
 export default function PinLockScreen() {
   const [pin, setPin] = useState("");
+  const { theme } = useTheme();
   const [savedPin, setSavedPin] = useState<string | null>(null);
   const router = useRouter();
 
@@ -30,26 +32,26 @@ export default function PinLockScreen() {
       }
       setSavedPin(pinFromStore);
       // Opcional: Tentar biometria automaticamente ao abrir
-      // handleBiometricAuth();
+      handleBiometricAuth();
     }
     init();
   }, []);
 
-  // const handleBiometricAuth = async () => {
-  //   const hasHardware = await LocalAuthentication.hasHardwareAsync();
-  //   const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+  const handleBiometricAuth = async () => {
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
-  //   if (hasHardware && isEnrolled) {
-  //     const result = await LocalAuthentication.authenticateAsync({
-  //       promptMessage: "Entrar com Biometria",
-  //       fallbackLabel: "Usar PIN",
-  //     });
+    if (hasHardware && isEnrolled) {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Entrar com Biometria",
+        fallbackLabel: "Usar PIN",
+      });
 
-  //     if (result.success) {
-  //       router.replace("/(tabs)");
-  //     }
-  //   }
-  // };
+      if (result.success) {
+        router.replace("/(tabs)");
+      }
+    }
+  };
 
   const handlePinPress = (digit: number) => {
     if (pin.length >= 4) return;
@@ -110,25 +112,35 @@ export default function PinLockScreen() {
             onPress={() => handlePinPress(num)}
             style={styles.keypadButton}
           >
-            <Typo fontWeight={"600"} size={30}>
+            <Typo
+              fontWeight={"600"}
+              color={theme === "light" ? "#fff" : ""}
+              size={30}
+            >
               {num}
             </Typo>
           </TouchableOpacity>
         ))}
 
         {/* Botão Biometria */}
-        {/* <TouchableOpacity
+        <TouchableOpacity
           onPress={handleBiometricAuth}
           style={styles.keypadButton}
         >
           <FontAwesome6 name="fingerprint" size={28} color={Colors.primary} />
-        </TouchableOpacity> */}
+        </TouchableOpacity>
+
+        {/* <View style={styles.keypadButton} /> */}
 
         <TouchableOpacity
           onPress={() => handlePinPress(0)}
           style={styles.keypadButton}
         >
-          <Typo fontWeight={"600"} size={30}>
+          <Typo
+            fontWeight={"600"}
+            color={theme === "light" ? "#fff" : ""}
+            size={30}
+          >
             0
           </Typo>
         </TouchableOpacity>
