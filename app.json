@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "Kwanza_Controlo",
+    "slug": "Kwanza_Controlo",
+    "version": "1.0.4",
+    "orientation": "portrait",
+    "icon": "./assets/images/splash-logo.png",
+    "scheme": "kwanzacontrolo",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/splash-logo.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.emanuel_jebs.Kwanza_Controlo"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/splash-logo.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true,
+          "useSQLCipher": true,
+          "android": {
+            "enableFTS": false,
+            "useSQLCipher": false
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "owner": "emanuel_jebs",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d2481c54-81f5-4cbd-a7cd-aa14d133429c"
+      }
+    }
+  }
+}
