@@ -1,4 +1,4 @@
-import { getRandomColor } from "@/constants/icons";
+import { getCategoryColor } from "@/constants/icons";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { ResponseType, TransactionType, WalletType } from "@/types";
@@ -450,7 +450,7 @@ export const fetchWeeklyStats = async (uid: string): Promise<ResponseType> => {
     const pieData = Object.keys(categoryTotals).map((cat) => ({
       value: categoryTotals[cat],
       text: cat,
-      color: getRandomColor(cat),
+      color: getCategoryColor(cat),
     }));
 
     return { success: true, data: { stats, transactions, pieData } };
@@ -533,8 +533,8 @@ export const fetchMonthlyStats = async (uid: string): Promise<ResponseType> => {
       {
         value: month.income,
         label: month.month,
-        spacing: scale(4),
-        labelWidth: scale(40),
+        spacing: scale(3),
+        labelWidth: scale(30),
         frontColor: "#2f4",
       },
       {
@@ -546,7 +546,7 @@ export const fetchMonthlyStats = async (uid: string): Promise<ResponseType> => {
     const pieData = Object.keys(categoryTotals).map((cat) => ({
       value: categoryTotals[cat],
       label: cat,
-      color: getRandomColor(cat),
+      color: getCategoryColor(cat),
     }));
 
     return { success: true, data: { stats, transactions, pieData } };
@@ -629,7 +629,7 @@ export const fetchYearlyStats = async (uid: string): Promise<ResponseType> => {
     ]);
 
     const pieData = Object.keys(categoryTotals).map((cat) => {
-      const color = getRandomColor(cat);
+      const color = getCategoryColor(cat);
       return {
         value: categoryTotals[cat],
         label: cat,

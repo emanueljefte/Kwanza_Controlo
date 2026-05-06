@@ -35,7 +35,8 @@ export default function SearchModal() {
         item.category?.toLowerCase()?.includes(s) ||
         item.type?.toLowerCase()?.includes(s) ||
         item.description?.toLowerCase()?.includes(s) ||
-        item.amount?.toString()?.includes(s)
+        item.amount?.toString()?.includes(s) ||
+        item.walletName?.toLowerCase()?.includes(s)
       );
     }
     return true;

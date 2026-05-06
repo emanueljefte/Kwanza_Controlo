@@ -13,7 +13,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  View
+  View,
 } from "react-native";
 
 type RegisterViewPops = {

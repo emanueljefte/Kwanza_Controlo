@@ -198,7 +198,7 @@ export default function TransactionModel() {
     const res = await createOrUpdateTransaction(transactionData);
     setLoading(false);
     if (res.success) {
-      router.back();
+      router.replace("/(tabs)");
     } else {
       showAlert("transação", res.msg as string);
     }

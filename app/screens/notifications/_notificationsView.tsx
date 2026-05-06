@@ -5,9 +5,15 @@ import Typo from "@/components/Typo";
 import { Colors } from "@/constants/colors";
 import { useTheme } from "@/contexts/ThemeContext";
 import { NotificationRecord } from "@/db/schema";
+import { formatScheduleDisplay } from "@/services/notificationService";
 import { scale, verticalScale } from "@/utils/styling";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { router } from "expo-router";
+import {
+  BellSimpleIcon,
+  BellSlashIcon,
+  ClockIcon,
+} from "phosphor-react-native";
 import React from "react";
 import {
   FlatList,
@@ -28,23 +34,72 @@ export default function NotificationsView({
 }: NotificationsViewProps) {
   const { theme } = useTheme();
   const renderNotification = ({ item }: { item: NotificationRecord }) => (
-    <View style={[styles.notificationCard, { backgroundColor: theme.border }]}>
-      <View style={styles.cardInfo}>
-        <Typo size={18} fontWeight="600">
-          {item.title}
-        </Typo>
-        <Typo size={14} color="#aaa" style={{ marginTop: 2 }}>
-          {item.body}
-        </Typo>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      style={[styles.notificationCard, { backgroundColor: theme.border }]}
+      onPress={() =>
+        router.push({ pathname: "/(modals)/notification", params: item as any })
+      }
+    >
+      <View style={styles.cardContent}>
+        {/* Ícone Lateral de Status */}
+        <View
+          style={[
+            styles.iconContainer,
+            {
+              backgroundColor: item.enabled
+                ? `${Colors.dark.primary}20`
+                : "#333",
+            },
+          ]}
+        >
+          {item.enabled ? (
+            <BellSimpleIcon
+              size={24}
+              color={Colors.dark.primary}
+              weight="fill"
+            />
+          ) : (
+            <BellSlashIcon size={24} color="#666" weight="regular" />
+          )}
+        </View>
+
+        <View style={styles.cardInfo}>
+          <Typo
+            size={17}
+            fontWeight="700"
+            color={item.enabled ? "#fff" : "#888"}
+          >
+            {item.title}
+          </Typo>
+
+          <Typo size={13} color="#aaa" style={{ marginBottom: 8 }}>
+            {item.body}
+          </Typo>
+
+          {/* Linha de Detalhes com Ícones */}
+          <View style={styles.detailsRow}>
+            <View style={styles.detailItem}>
+              <ClockIcon size={14} color={Colors.dark.primary} weight="bold" />
+              <Typo size={13} fontWeight="600" style={{ marginLeft: 4 }}>
+                {formatScheduleDisplay(item)}
+              </Typo>
+            </View>
+          </View>
+        </View>
+
+        {/* Controle do Switch */}
+        <View style={styles.switchWrapper}>
+          <Switch
+            value={item.enabled}
+            onValueChange={(value) => onSwitchChange(item, value)}
+            trackColor={{ false: "#444", true: `${Colors.dark.primary}80` }}
+            thumbColor={item.enabled ? Colors.dark.primary : "#999"}
+            ios_backgroundColor="#3e3e3e"
+          />
+        </View>
       </View>
-      <Switch
-        value={item.enabled}
-        onValueChange={(value) => onSwitchChange(item, value)}
-        trackColor={{ false: "#333", true: `${Colors.dark.primary}80` }}
-        thumbColor={item.enabled ? Colors.dark.primary : "#f4f3f4"}
-        ios_backgroundColor="#3e3e3e"
-      />
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -120,22 +175,50 @@ const styles = StyleSheet.create({
     paddingBottom: verticalScale(30),
     gap: verticalScale(15),
   },
-  notificationCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#1A1A1A",
-    padding: scale(16),
-    borderRadius: 20,
-  },
-  cardInfo: {
-    flex: 1,
-    paddingRight: scale(10),
-  },
   emptyState: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     marginTop: verticalScale(100),
+  },
+  notificationCard: {
+    borderRadius: 20,
+    padding: scale(16),
+    marginBottom: scale(12),
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconContainer: {
+    width: scale(48),
+    height: scale(48),
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: scale(12),
+  },
+  cardInfo: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  detailsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  detailItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  switchWrapper: {
+    marginLeft: scale(10),
+    transform: [{ scaleX: 0.9 }, { scaleY: 0.9 }], // Switch ligeiramente menor para elegância
   },
 });

@@ -49,7 +49,7 @@ export default function StatisticView({
             onPress={onExport}
             style={{ alignSelf: "flex-end", padding: 10 }}
           >
-            <Icons.FilePdf
+            <Icons.FilePdfIcon
               size={28}
               color={Colors.dark.primary}
               weight="fill"
@@ -136,12 +136,12 @@ export default function StatisticView({
                           <BarChart
                             data={data}
                             barWidth={scale(10)}
-                            spacing={scale(14)}
+                            spacing={index === 0 ? scale(16) : scale(5)}
                             roundedTop
-                            noOfSections={3}
+                            noOfSections={5}
                             yAxisThickness={0}
                             xAxisThickness={1}
-                            xAxisColor={"#444"} // Linha do eixo X visível
+                            xAxisColor={"#444"}
                             yAxisTextStyle={{ color: "#aaa", fontSize: 10 }}
                             xAxisLabelTextStyle={{
                               color: "#aaa",
@@ -151,8 +151,9 @@ export default function StatisticView({
                             hideRules={false}
                             rulesColor={"#333"}
                             backgroundColor={"transparent"}
-                            initialSpacing={15}
+                            initialSpacing={scale(10)}
                             dashWidth={0}
+                            scrollToEnd={true}
                           />
                         </ViewShot>
                       </View>

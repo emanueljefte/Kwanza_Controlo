@@ -13,6 +13,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import React, { useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -61,147 +62,161 @@ export default function NotificationsModalView({
           title={params.id ? "Editar Lembrete" : "Novo Lembrete"}
           leftIcon={<BackButton />}
         />
-
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
         >
-          {/* TÍTULO */}
-          <View style={styles.inputGap}>
-            <Typo size={16}>Título</Typo>
-            <Input
-              placeholder="Ex: Pagar a renda"
-              value={notification.title}
-              onChangeText={(v) =>
-                setNotification({ ...notification, title: v })
-              }
-            />
-          </View>
-
-          {/* FREQUÊNCIA */}
-          <View style={styles.inputGap}>
-            <Typo size={16}>Repetir</Typo>
-            <Dropdown
-              style={styles.dropdownContainer}
-              placeholderStyle={styles.dropdownPlaceholder}
-              selectedTextStyle={[
-                styles.dropdownSelectedText,
-                { color: theme.title },
-              ]}
-              data={frequency}
-              labelField={"label"}
-              valueField={"value"}
-              value={notification.frequency}
-              onChange={(item) =>
-                setNotification({ ...notification, frequency: item.value })
-              }
-              containerStyle={[
-                styles.dropdownListContainer,
-                { backgroundColor: theme.background },
-              ]}
-              itemTextStyle={{ color: theme.title }}
-              activeColor={Colors.dark.primary + "40"}
-            />
-          </View>
-
-          {/* DATA E HORA EM ROW */}
-          <View style={{ flexDirection: "row", gap: scale(15) }}>
-            <View style={[styles.inputGap, { flex: 1 }]}>
-              <Typo size={16}>Data</Typo>
-              <Pressable
-                style={styles.dateInput}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <FontAwesome6
-                  name="calendar-days"
-                  size={16}
-                  color={Colors.dark.primary}
-                />
-                <Typo size={14}>{formatDate(notification.schedule_date)}</Typo>
-              </Pressable>
-            </View>
-
-            <View style={[styles.inputGap, { flex: 0.8 }]}>
-              <Typo size={16}>Hora</Typo>
-              <Pressable
-                style={styles.dateInput}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <FontAwesome6
-                  name="clock"
-                  size={16}
-                  color={Colors.dark.primary}
-                />
-                <Typo size={14}>
-                  {formatTime(notification.schedule_time as Date)}
-                </Typo>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* DESCRIÇÃO */}
-          <View style={styles.inputGap}>
-            <Typo size={16}>Notas (Opcional)</Typo>
-            <Input
-              multiline
-              placeholder="Detalhes adicionais..."
-              value={notification.body}
-              containerStyle={styles.textArea}
-              onChangeText={(v) =>
-                setNotification({ ...notification, body: v })
-              }
-            />
-          </View>
-
-          {/* PICKERS CONDICIONAIS */}
-          {showDatePicker && (
-            <DateTimePicker
-              value={notification.schedule_date as Date}
-              mode="date"
-              minimumDate={new Date()}
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(e, date) => {
-                setShowDatePicker(Platform.OS === "ios");
-                if (date)
-                  setNotification({ ...notification, schedule_date: date });
-              }}
-            />
-          )}
-          {showTimePicker && (
-            <DateTimePicker
-              value={notification.schedule_time as Date}
-              mode="time"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(e, date) => {
-                setShowTimePicker(Platform.OS === "ios");
-                if (date)
-                  setNotification({ ...notification, schedule_time: date });
-              }}
-            />
-          )}
-        </ScrollView>
-      </View>
-
-      {/* FOOTER ACTIONS */}
-      <View style={styles.footer}>
-        {params.id && (
-          <TouchableOpacity
-            style={styles.deleteBtn}
-            onPress={() =>
-              Alert.alert("Eliminar", "Desejas apagar este lembrete?", [
-                { text: "Não" },
-                { text: "Sim", onPress: onDelete, style: "destructive" },
-              ])
-            }
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            <FontAwesome6 name="trash-can" size={20} color="#fff" />
-          </TouchableOpacity>
-        )}
-        <Button onPress={onSubmit} loading={loading} style={{ flex: 1 }}>
-          <Typo color="#000" fontWeight={"700"}>
-            {params.id ? "Salvar Alterações" : "Criar Lembrete"}
-          </Typo>
-        </Button>
+            {/* TÍTULO */}
+            <View style={styles.inputGap}>
+              <Typo size={16}>Título</Typo>
+              <Input
+                placeholder="Ex: Pagar a renda"
+                value={notification.title}
+                onChangeText={(v) =>
+                  setNotification({ ...notification, title: v })
+                }
+              />
+            </View>
+
+            {/* FREQUÊNCIA */}
+            <View style={styles.inputGap}>
+              <Typo size={16}>Repetir</Typo>
+              <Dropdown
+                style={[
+                  styles.dropdownContainer,
+                  { backgroundColor: theme.navBackground },
+                ]}
+                placeholderStyle={styles.dropdownPlaceholder}
+                selectedTextStyle={[
+                  styles.dropdownSelectedText,
+                  { color: theme.title },
+                ]}
+                data={frequency}
+                labelField={"label"}
+                valueField={"value"}
+                value={notification.frequency}
+                onChange={(item) =>
+                  setNotification({ ...notification, frequency: item.value })
+                }
+                containerStyle={[
+                  styles.dropdownListContainer,
+                  { backgroundColor: theme.background },
+                ]}
+                itemTextStyle={{ color: theme.title }}
+                activeColor={Colors.dark.primary + "40"}
+              />
+            </View>
+
+            {/* DATA E HORA EM ROW */}
+            <View style={{ flexDirection: "row", gap: scale(15) }}>
+              <View style={[styles.inputGap, { flex: 1 }]}>
+                <Typo size={16}>Data</Typo>
+                <Pressable
+                  style={[
+                    styles.dateInput,
+                    { backgroundColor: theme.navBackground },
+                  ]}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <FontAwesome6
+                    name="calendar-days"
+                    size={16}
+                    color={Colors.dark.primary}
+                  />
+                  <Typo size={14}>
+                    {formatDate(notification.schedule_date)}
+                  </Typo>
+                </Pressable>
+              </View>
+
+              <View style={[styles.inputGap, { flex: 0.8 }]}>
+                <Typo size={16}>Hora</Typo>
+                <Pressable
+                  style={[
+                    styles.dateInput,
+                    { backgroundColor: theme.navBackground },
+                  ]}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <FontAwesome6
+                    name="clock"
+                    size={16}
+                    color={Colors.dark.primary}
+                  />
+                  <Typo size={14}>
+                    {formatTime(notification.schedule_time as Date)}
+                  </Typo>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* DESCRIÇÃO */}
+            <View style={styles.inputGap}>
+              <Typo size={16}>Notas (Opcional)</Typo>
+              <Input
+                multiline
+                placeholder="Detalhes adicionais..."
+                value={notification.body}
+                containerStyle={styles.textArea}
+                onChangeText={(v) =>
+                  setNotification({ ...notification, body: v })
+                }
+              />
+            </View>
+
+            {/* PICKERS CONDICIONAIS */}
+            {showDatePicker && (
+              <DateTimePicker
+                value={notification.schedule_date as Date}
+                mode="date"
+                minimumDate={new Date()}
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={(e, date) => {
+                  setShowDatePicker(Platform.OS === "ios");
+                  if (date)
+                    setNotification({ ...notification, schedule_date: date });
+                }}
+              />
+            )}
+            {showTimePicker && (
+              <DateTimePicker
+                value={notification.schedule_time as Date}
+                mode="time"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={(e, date) => {
+                  setShowTimePicker(Platform.OS === "ios");
+                  if (date)
+                    setNotification({ ...notification, schedule_time: date });
+                }}
+              />
+            )}
+            <View style={styles.footer}>
+              {params.id && (
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={() =>
+                    Alert.alert("Eliminar", "Desejas apagar este lembrete?", [
+                      { text: "Não" },
+                      { text: "Sim", onPress: onDelete, style: "destructive" },
+                    ])
+                  }
+                >
+                  <FontAwesome6 name="trash-can" size={20} color="#fff" />
+                </TouchableOpacity>
+              )}
+              <Button onPress={onSubmit} loading={loading} style={{ flex: 1 }}>
+                <Typo color="#000" fontWeight={"700"}>
+                  {params.id ? "Salvar Alterações" : "Criar Lembrete"}
+                </Typo>
+              </Button>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </>
   );
@@ -220,7 +235,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     height: verticalScale(54),
     alignItems: "center",
-    backgroundColor: "#fff",
     borderRadius: 15,
     paddingHorizontal: scale(15),
     gap: 10,
@@ -228,7 +242,6 @@ const styles = StyleSheet.create({
   dropdownContainer: {
     height: verticalScale(54),
     borderRadius: 15,
-    backgroundColor: "#fff",
     paddingHorizontal: scale(15),
   },
   dropdownListContainer: {
@@ -248,9 +261,8 @@ const styles = StyleSheet.create({
     paddingTop: verticalScale(15),
     paddingBottom: verticalScale(20),
     flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopColor: "#222",
-    gap: scale(12),
+    alignItems: "center",
+    gap: 12,
   },
   deleteBtn: {
     backgroundColor: "#dc2626",

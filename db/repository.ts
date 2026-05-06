@@ -18,6 +18,13 @@ export const NotificationRepo = {
     return await db.select().from(schema.notifications);
   },
 
+  findById: async (id: string) => {
+    return await db
+      .select()
+      .from(schema.notifications)
+      .where(eq(schema.notifications.id, id));
+  },
+
   updateStatus: async (id: string, enabled: boolean) => {
     return await db
       .update(schema.notifications)

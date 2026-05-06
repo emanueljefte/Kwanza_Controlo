@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useWallet } from "@/contexts/walletContext";
 import useFetchData from "@/hooks/useFetchData";
 import { WalletType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
@@ -30,7 +31,7 @@ export default function HomeCard() {
 
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
+  const { selectedWalletId, setSelectedWalletId } = useWallet();
   const { theme } = useTheme();
   useFocusEffect(
     useCallback(() => {
@@ -43,6 +44,9 @@ export default function HomeCard() {
     { uid: user?.uid as string },
     refreshKey,
   );
+
+  const selectedWallet =
+    wallets.find((w) => w.id === Number(selectedWalletId)) || null;
 
   const getTotals = () => {
     // Se uma carteira específica estiver selecionada, mostra o saldo dela
@@ -218,7 +222,7 @@ export default function HomeCard() {
             <TouchableOpacity
               style={styles.modalOption}
               onPress={() => {
-                setSelectedWallet(null);
+                setSelectedWalletId(null);
                 setShowModal(false);
               }}
             >
@@ -243,7 +247,7 @@ export default function HomeCard() {
                 key={w.id}
                 style={styles.modalOption}
                 onPress={() => {
-                  setSelectedWallet(w);
+                  setSelectedWalletId(w.id as number);
                   setShowModal(false);
                 }}
               >

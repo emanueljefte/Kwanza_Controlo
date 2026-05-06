@@ -68,10 +68,13 @@ export default function Register() {
       showAlert("Erro no Registro", res.msg as any);
       return;
     }
-    setTimeout(() => {
+    // AJUSTAR PARA O MODAL APARECER
+    const timer = setTimeout(() => {
       showAlert("Registro", "Usuário Cadastrado com sucesso", "success");
       router.replace("/(auth)/login");
     }, 2000);
+
+    clearTimeout(timer);
   };
 
   return (

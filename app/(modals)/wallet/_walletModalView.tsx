@@ -8,7 +8,14 @@ import { WalletType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
 import { FontAwesome, FontAwesome6 } from "@expo/vector-icons"; // Adicionado FontAwesome6
 import React from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 // Lista de ícones sugeridos para carteiras
 const WALLET_ICONS = [
@@ -44,72 +51,80 @@ export default function WalletModalView({
         style={{ marginBottom: verticalScale(20) }}
       />
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollForm}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        {/* Nome da Carteira */}
-        <View style={styles.inputGroup}>
-          <Typo size={16} fontWeight="600">
-            Nome da Carteira
-          </Typo>
-          <Input
-            placeholder="Ex: Salário, Poupança..."
-            value={wallet.name}
-            onChangeText={(value) => setWallet({ ...wallet, name: value })}
-          />
-        </View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollForm}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Nome da Carteira */}
+          <View style={styles.inputGroup}>
+            <Typo size={16} fontWeight="600">
+              Nome da Carteira
+            </Typo>
+            <Input
+              placeholder="Ex: Salário, Poupança..."
+              value={wallet.name}
+              onChangeText={(value) => setWallet({ ...wallet, name: value })}
+            />
+          </View>
 
-        {/* Seleção de Ícone */}
-        <View style={styles.inputGroup}>
-          <Typo size={16} fontWeight="600">
-            Selecione um Ícone
-          </Typo>
-          <View style={styles.iconGrid}>
-            {WALLET_ICONS.map((icon) => (
+          {/* Seleção de Ícone */}
+          <View style={styles.inputGroup}>
+            <Typo size={16} fontWeight="600">
+              Selecione um Ícone
+            </Typo>
+            <View style={styles.iconGrid}>
+              {WALLET_ICONS.map((icon) => (
+                <TouchableOpacity
+                  key={icon.name}
+                  onPress={() => setWallet({ ...wallet, image: icon.name })}
+                  style={[
+                    styles.iconCard,
+                    wallet.image === icon.name && styles.iconCardActive,
+                  ]}
+                >
+                  <FontAwesome6
+                    name={icon.name}
+                    size={24}
+                    color={
+                      wallet.image === icon.name ? Colors.dark.primary : "#888"
+                    }
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <View style={styles.footer}>
+            {id && (
               <TouchableOpacity
-                key={icon.name}
-                onPress={() => setWallet({ ...wallet, image: icon.name })}
-                style={[
-                  styles.iconCard,
-                  wallet.image === icon.name && styles.iconCardActive,
-                ]}
+                style={styles.deleteButton}
+                onPress={showDeleteAlert}
+                disabled={loading}
               >
-                <FontAwesome6
-                  name={icon.name}
-                  size={24}
-                  color={
-                    wallet.image === icon.name ? Colors.dark.primary : "#888"
-                  }
+                <FontAwesome
+                  name="trash"
+                  color={Colors.dark.warning}
+                  size={22}
                 />
               </TouchableOpacity>
-            ))}
+            )}
+
+            <Button
+              onPress={onSubmit}
+              loading={loading}
+              style={styles.submitButton}
+            >
+              <Typo fontWeight="700" color="#fff" size={16}>
+                {id ? "Salvar Alterações" : "Criar Carteira"}
+              </Typo>
+            </Button>
           </View>
-        </View>
-      </ScrollView>
-
-      {/* Rodapé de Ações */}
-      <View style={styles.footer}>
-        {id && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={showDeleteAlert}
-            disabled={loading}
-          >
-            <FontAwesome name="trash" color={Colors.dark.warning} size={22} />
-          </TouchableOpacity>
-        )}
-
-        <Button
-          onPress={onSubmit}
-          loading={loading}
-          style={styles.submitButton}
-        >
-          <Typo fontWeight="700" color="#fff" size={16}>
-            {id ? "Salvar Alterações" : "Criar Carteira"}
-          </Typo>
-        </Button>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -144,7 +159,7 @@ const styles = StyleSheet.create({
   },
   iconCardActive: {
     borderColor: Colors.dark.primary,
-    backgroundColor: `${Colors.dark.primary}10`, // Cor primária com 10% de opacidade
+    backgroundColor: `${Colors.dark.primary}10`,
   },
   footer: {
     flexDirection: "row",

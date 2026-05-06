@@ -8,10 +8,11 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { RefObject } from "react";
 import {
-  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
 
@@ -30,91 +31,100 @@ export default function LoginView({
   onSubmit,
 }: LoginViewProps) {
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.container}>
-        {/* Top Bar & Header */}
-        <View style={styles.header}>
-          <BackButton
-            onPress={() => router.push("/(auth)/welcome")}
-            iconSize={24}
-          />
-          <View style={styles.textContainer}>
-            <Typo size={32} fontWeight={"800"}>
-              Olá,
-            </Typo>
-            <Typo size={32} fontWeight={"800"} color={Colors.dark.primary}>
-              Bem-vindo de Volta
-            </Typo>
-            <Typo size={16} color="#666" style={{ marginTop: 5 }}>
-              Aceda à sua conta para gerir o seu dinheiro.
-            </Typo>
-          </View>
-        </View>
-
-        {/* Form */}
-        <View style={styles.form}>
-          <View>
-            <Input
-              placeholder="Introduza o teu e-mail"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              onChangeText={(value) => (email.current = value)}
-              icon={<Feather name="mail" size={20} />}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: verticalScale(30) }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.container}>
+          {/* Top Bar & Header */}
+          <View style={styles.header}>
+            <BackButton
+              onPress={() => router.push("/(auth)/welcome")}
+              iconSize={24}
             />
-            {errorEmail ? (
-              <Typo
-                color={Colors.dark.warning}
-                size={13}
-                style={styles.errorText}
-              >
-                {errorEmail}
+            <View style={styles.textContainer}>
+              <Typo size={32} fontWeight={"800"}>
+                Olá,
               </Typo>
-            ) : null}
+              <Typo size={32} fontWeight={"800"} color={Colors.dark.primary}>
+                Bem-vindo de Volta
+              </Typo>
+              <Typo size={16} color="#666" style={{ marginTop: 5 }}>
+                Aceda à sua conta para gerir o seu dinheiro.
+              </Typo>
+            </View>
           </View>
 
-          <View style={{ gap: verticalScale(12) }}>
-            <Input
-              placeholder="Introduza a tua Palavra-Passe"
-              secureTextEntry
-              onChangeText={(value) => (password.current = value)}
-              icon={<Feather name="lock" size={20} />}
-            />
+          {/* Form */}
+          <View style={styles.form}>
+            <View>
+              <Input
+                placeholder="Introduza o teu e-mail"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                onChangeText={(value) => (email.current = value)}
+                icon={<Feather name="mail" size={20} />}
+              />
+              {errorEmail ? (
+                <Typo
+                  color={Colors.dark.warning}
+                  size={13}
+                  style={styles.errorText}
+                >
+                  {errorEmail}
+                </Typo>
+              ) : null}
+            </View>
 
-            <Pressable
-              onPress={() => {
-                /* Lógica de Reset */
-              }}
-              style={styles.forgotPass}
+            <View>
+              <Input
+                placeholder="Introduza a tua Palavra-Passe"
+                secureTextEntry
+                onChangeText={(value) => (password.current = value)}
+                icon={<Feather name="lock" size={20} />}
+              />
+
+              <Pressable
+                onPress={() => {
+                  /* Lógica de Reset */
+                }}
+                style={styles.forgotPass}
+              >
+                <Typo size={14} color="#777" fontWeight={"600"}>
+                  Esqueci a Palavra-Passe
+                </Typo>
+              </Pressable>
+            </View>
+
+            <Button
+              loading={isLoading}
+              onPress={onSubmit}
+              style={styles.loginBtn}
             >
-              <Typo size={14} color="#777" fontWeight={"600"}>
-                Esqueci a Palavra-Passe
+              <Typo fontWeight={"700"} color={"white"} size={18}>
+                Entrar
+              </Typo>
+            </Button>
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Typo size={16}>Não tem uma conta?</Typo>
+            <Pressable onPress={() => router.push("/(auth)/register")}>
+              <Typo size={16} fontWeight={"700"} color={Colors.dark.primary}>
+                {" "}
+                Cadastra-se
               </Typo>
             </Pressable>
           </View>
-
-          <Button
-            loading={isLoading}
-            onPress={onSubmit}
-            style={styles.loginBtn}
-          >
-            <Typo fontWeight={"700"} color={"white"} size={18}>
-              Entrar
-            </Typo>
-          </Button>
         </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Typo size={16}>Não tem uma conta?</Typo>
-          <Pressable onPress={() => router.push("/(auth)/register")}>
-            <Typo size={16} fontWeight={"700"} color={Colors.dark.primary}>
-              {" "}
-              Cadastra-se
-            </Typo>
-          </Pressable>
-        </View>
-      </View>
-    </TouchableWithoutFeedback>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -143,7 +153,6 @@ const styles = StyleSheet.create({
   },
   forgotPass: {
     alignSelf: "flex-end",
-    paddingVertical: 4,
   },
   loginBtn: {
     marginTop: verticalScale(10),

@@ -2,6 +2,7 @@ import * as schema from "@/db/schema";
 import { NotificationType } from "@/types";
 import notifee, {
   AndroidImportance,
+  EventType,
   RepeatFrequency,
   TimestampTrigger,
   TriggerNotification,
@@ -111,20 +112,22 @@ export async function listScheduleNotifications(): Promise<
 }
 
 export async function syncNotification(data: NotificationRecord) {
-  // 1. Sempre atualiza o banco de dados primeiro
+  // 1. Atualiza o banco de dados primeiro
   await NotificationRepo.save(data);
 
-  // 2. Se estiver desativado, removemos do sistema de triggers do Android/iOS
+  // 2. Se desativado, remove do sistema e encerra
   if (!data.enabled) {
     await notifee.cancelNotification(data.id);
     return;
   }
 
-  // 3. Preparar datas (Combina Data com Hora)
+  // 3. Preparar datas de forma segura
+  const now = new Date();
   const startDate = new Date(data.schedule_date);
   const timeDate = new Date(data.schedule_time);
 
-  const triggerDate = new Date(
+  // Criamos o triggerDate garantindo o fuso horário local
+  let triggerDate = new Date(
     startDate.getFullYear(),
     startDate.getMonth(),
     startDate.getDate(),
@@ -133,10 +136,29 @@ export async function syncNotification(data: NotificationRecord) {
     0,
   );
 
-  // Se a data/hora já passou e não é recorrente, não agenda
-  if (triggerDate.getTime() <= Date.now() && data.frequency === 1) {
-    console.warn("Tentativa de agendar notificação no passado.");
+  if (data.frequency === 1 && triggerDate.getTime() <= now.getTime()) {
+    console.log("Notificação única já expirou. Desativando...");
+
+    // Atualiza no banco para disabled
+    await NotificationRepo.save({ ...data, enabled: false });
+
+    // Cancela qualquer agendamento pendente no Notifee por segurança
+    await notifee.cancelNotification(data.id);
     return;
+  }
+
+  if (triggerDate.getTime() <= now.getTime()) {
+    if (data.frequency === 2) {
+      // Diário
+      triggerDate.setDate(triggerDate.getDate() + 1);
+    } else if (data.frequency === 3) {
+      // Semanal
+      triggerDate.setDate(triggerDate.getDate() + 7);
+    } else {
+      // Se não for recorrente e já passou, não agendamos
+      console.warn("Data no passado para notificação única.");
+      return;
+    }
   }
 
   // 4. Mapear Frequência
@@ -146,17 +168,23 @@ export async function syncNotification(data: NotificationRecord) {
 
   const trigger: TimestampTrigger = {
     type: TriggerType.TIMESTAMP,
-    timestamp: triggerDate.getTime(),
+    timestamp: triggerDate.getTime(), // O getTime() já retorna o UTC milisegundos correto para o fuso local
     repeatFrequency,
-    alarmManager: true,
+    alarmManager: {
+      allowWhileIdle: true, // Importante para Android não matar a notificação em Doze Mode
+    },
   };
 
-  // 5. Agendar no Notifee
+  // 5. Configuração do Canal e Agendamento
   const channelId = await notifee.createChannel({
     id: "reminders",
     name: "Lembretes Financeiros",
     importance: AndroidImportance.HIGH,
+    sound: "default",
   });
+
+  // Cancelamos qualquer agendamento anterior do mesmo ID antes de criar o novo (Prevenção de duplicados)
+  await notifee.cancelNotification(data.id);
 
   await notifee.createTriggerNotification(
     {
@@ -165,12 +193,15 @@ export async function syncNotification(data: NotificationRecord) {
       body: data.body,
       android: {
         channelId,
-        pressAction: {
-          id: "default",
-        },
+        pressAction: { id: "default" },
+        // Sugestão: adicione um ícone pequeno aqui se tiver
       },
     },
     trigger,
+  );
+
+  console.log(
+    `Notificação [${data.title}] agendada para: ${triggerDate.toString()}`,
   );
 }
 
@@ -199,4 +230,65 @@ export const deleteNotification = async (id: string, uid: string) => {
     console.error("[NotificationService] Erro ao eliminar notificação:", error);
     throw error; // Lançamos o erro para ser capturado pelo Alert no modal
   }
+};
+
+export const formatScheduleDisplay = (item: any) => {
+  const date = new Date(item.schedule_time);
+
+  // Opções para apenas hora: 14:30
+  const timeOptions: Intl.DateTimeFormatOptions = {
+    hour: "2-digit",
+    minute: "2-digit",
+  };
+
+  // Opções para data e hora: 30 Abr, 14:30
+  const dateTimeOptions: Intl.DateTimeFormatOptions = {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  };
+
+  if (item.frequency === 1) {
+    return date.toLocaleString("pt-AO", dateTimeOptions);
+  }
+
+  return date.toLocaleString("pt-AO", timeOptions);
+};
+
+export const ForegroundNotification = () => {
+  // Subscrever aos eventos em primeiro plano (Foreground)
+  const unsubscribe = notifee.onForegroundEvent(async ({ type, detail }) => {
+    const { notification } = detail;
+
+    // Evento de clique na notificação
+    if (type === EventType.PRESS && notification?.id) {
+      // 1. Procurar a notificação no banco de dados local
+      const [notificationData] = await NotificationRepo.findById(
+        notification.id,
+      );
+
+      if (notificationData) {
+        // 2. Verificar se é uma notificação de execução única (frequency === 1)
+        if (notificationData.frequency === 1) {
+          console.log(
+            `Notificação única [${notification.id}] executada. Desativando...`,
+          );
+
+          // 3. Atualizar para desativado para que o Switch na UI reflita o estado real
+          await NotificationRepo.save({
+            ...notificationData,
+            enabled: false,
+          });
+        }
+      }
+
+      // 4. Remover a notificação da barra de estado após o clique (opcional)
+      if (notification.id) {
+        await notifee.cancelNotification(notification.id);
+      }
+    }
+  });
+
+  return () => unsubscribe(); // Limpar a subscrição ao desmontar
 };

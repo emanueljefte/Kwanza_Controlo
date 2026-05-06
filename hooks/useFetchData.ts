@@ -1,13 +1,12 @@
 import { db } from "@/db";
 import * as schema from "@/db/schema";
-import NetInfo from "@react-native-community/netinfo";
 import { and, desc, eq } from "drizzle-orm";
 import { useEffect, useState } from "react";
 
 export default function useFetchData<T>(
   dataBaseName: "wallets" | "users" | "transactions",
   filters: Record<string, string | number | boolean> = {},
-  refreshKey: number,
+  refreshKey?: number,
 ) {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,43 +19,6 @@ export default function useFetchData<T>(
       setLoading(true);
       setError(null);
 
-      const net = await NetInfo.fetch();
-      const isOnline = net.isConnected === true;
-
-      // if (isOnline) {
-      //   try {
-      //     const token = await AsyncStorage.getItem("token");
-
-      //     const queryParams = new URLSearchParams();
-      //     for (const key in filters) {
-      //       if (filters[key] !== undefined && filters[key] !== null) {
-      //         queryParams.append(key, String(filters[key]));
-      //       }
-      //     }
-
-      //     const url = `http://10.0.2.2:3000/api/v1/${dataBaseName}?${queryParams.toString()}`;
-      //     const res = await fetch(url, {
-      //       headers: {
-      //         Authorization: `Bearer ${token}`,
-      //         "Content-Type": "application/json",
-      //       },
-      //     });
-
-      //     const json = await res.json();
-      //     setData(json);
-
-      //     // Opcional: salvar no SQLite para uso offline depois
-      //     // await drizzleDb.insert(schema[dataBaseName]).values(json).onConflictDoUpdate(...)
-
-      //   } catch (err: any) {
-      //     console.error("Erro ao buscar online:", err);
-      //     setError(err.message || "Erro desconhecido");
-      //     await fetchFromLocal();
-      //   } finally {
-      //     setLoading(false);
-      //   }
-      // } else {
-      // }
       await fetchFromLocal();
       setLoading(false);
     };
@@ -91,7 +53,6 @@ export default function useFetchData<T>(
           // Realizamos o JOIN para buscar o nome da wallet
           const results = await db
             .select({
-              // Seleciona todos os campos da transação
               id: schema.transactions.id,
               amount: schema.transactions.amount,
               type: schema.transactions.type,
@@ -114,7 +75,6 @@ export default function useFetchData<T>(
           localData = results as T[];
         }
 
-        // Adicione outros dataBaseName aqui se necessário
         setData(localData);
       } catch (err: any) {
         console.error("Erro ao buscar local:", err);

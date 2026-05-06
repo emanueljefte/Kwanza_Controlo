@@ -3,11 +3,18 @@ import { Stack } from "expo-router";
 import { AuthProvider, useAuth } from "@/contexts/AuthProvider";
 import { DatabaseProvider } from "@/contexts/DatabaseContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { WalletProvider } from "@/contexts/walletContext";
 import "@/global.css";
+import { ForegroundNotification } from "@/services/notificationService";
+import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 const InitialLayout = () => {
   const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    ForegroundNotification();
+  }, []);
 
   return (
     <>
@@ -56,6 +63,11 @@ const InitialLayout = () => {
           />
 
           <Stack.Screen
+            name="(modals)/transfer/index"
+            options={{ presentation: "modal" }}
+          />
+
+          <Stack.Screen
             name="screens/settings/index"
             options={{ presentation: "modal" }}
           />
@@ -76,7 +88,9 @@ export default function RootLayout() {
       <ThemeProvider>
         <DatabaseProvider>
           <AuthProvider>
-            <InitialLayout />
+            <WalletProvider>
+              <InitialLayout />
+            </WalletProvider>
           </AuthProvider>
         </DatabaseProvider>
       </ThemeProvider>

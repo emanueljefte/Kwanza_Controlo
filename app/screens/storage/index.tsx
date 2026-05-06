@@ -2,6 +2,7 @@ import BackButton from "@/components/BackButton";
 import Header from "@/components/Header";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Typo from "@/components/Typo";
+import { BackupService } from "@/services/dataService";
 import { verticalScale } from "@/utils/styling";
 import {
   ArrowsCounterClockwiseIcon,
@@ -20,19 +21,6 @@ import {
 export default function StorageSettings() {
   const [loading, setLoading] = useState<string | null>(null);
 
-  const handleBackup = async () => {
-    setLoading("backup");
-    try {
-      // Simulação de chamada ao serviço
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      Alert.alert("Sucesso", "Backup realizado com sucesso na nuvem!");
-    } catch (e) {
-      Alert.alert("Erro", "Falha ao realizar backup.");
-    } finally {
-      setLoading(null);
-    }
-  };
-
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -49,7 +37,7 @@ export default function StorageSettings() {
             description="Enviar dados atuais para a nuvem"
             icon={<CloudArrowUpIcon size={22} color="#fff" />}
             bgColor="#0ea5e9"
-            onPress={handleBackup}
+            onPress={() => BackupService.handleBackup()}
             loading={loading === "backup"}
           />
 

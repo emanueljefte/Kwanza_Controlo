@@ -90,26 +90,54 @@ export const INCOME_CATALOG = {
 };
 
 const CATEGORY_COLORS: { [key: string]: string } = {
+  // Despesas (ICON_CATALOG)
+  "Essenciais & Casa": "#34C759", // Verde (Essenciais)
   Alimentação: "#FF9500", // Laranja
   Transporte: "#007AFF", // Azul
-  Saúde: "#FF3B30", // Vermelho
-  Lazer: "#AF52DE", // Roxo
-  Educação: "#5856D6", // Índigo
-  Casa: "#34C759", // Verde
-  Salário: "#34C759", // Verde (Renda)
-  Investimento: "#00C7BE", // Turquesa
-  Outros: "#8E8E93", // Cinza
+  "Saúde & Bem-estar": "#FF3B30", // Vermelho
+  "Lazer & Compras": "#AF52DE", // Roxo
+  "Educação & Trabalho": "#5856D6", // Índigo
+  "Família & Pets": "#FF2D55", // Rosa/Pêssego
+
+  // Receitas (INCOME_CATALOG)
+  "Rendas Principais": "#28CD41", // Verde Brilhante
+  "Investimentos & Ganhos": "#00C7BE", // Turquesa
+  "Outras Fontes": "#8E8E93", // Cinza
+
+  // Fallback (Caso algo falhe)
+  Outros: "#C7C7CC",
 };
 
-export const getRandomColor = (category: string) => {
-  return CATEGORY_COLORS[category] || "#575757"; // Cor padrão caso não exista no mapa
-};
+// Uma lista de cores vibrantes para atribuição aleatória/sequencial
+const PALETTE = [
+  "#FF9500",
+  "#007AFF",
+  "#FF3B30",
+  "#AF52DE",
+  "#5856D6",
+  "#34C759",
+  "#00C7BE",
+  "#FF2D55",
+  "#FFCC00",
+  "#5AC8FA",
+];
 
-// Define o tipo de um item de ícone individual
-type IconItem = {
-  name: string;
-  comp: Icons.Icon;
-  displayName: string;
+export const getCategoryColor = (categoryName: string) => {
+  // 1. Tenta encontrar no mapeamento fixo
+  if (CATEGORY_COLORS[categoryName]) {
+    return CATEGORY_COLORS[categoryName];
+  }
+
+  // 2. Se não existir, gera uma cor baseada no nome (Determinístico)
+  // Isso garante que a categoria "Netflix" terá sempre a mesma cor,
+  // mesmo que não esteja no catálogo.
+  let hash = 0;
+  for (let i = 0; i < categoryName.length; i++) {
+    hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  const index = Math.abs(hash) % PALETTE.length;
+  return PALETTE[index];
 };
 
 export const findCategoryInCatalog = (

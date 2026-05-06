@@ -1,4 +1,4 @@
-import { getRandomColor } from "@/constants/icons";
+import { getCategoryColor } from "@/constants/icons";
 import { useAuth } from "@/contexts/AuthProvider";
 import { exportToPDF } from "@/services/pdfService";
 import {
@@ -60,8 +60,8 @@ export default function Statistic() {
       value: categories[key],
       label: key,
       // GARANTA QUE A COR SEJA ATRIBUÍDA AQUI
-      color: getRandomColor(key),
-      gradientCenterColor: getRandomColor(key), // Opcional: para um visual melhor com gradiente
+      color: getCategoryColor(key),
+      gradientCenterColor: getCategoryColor(key),
       text: key,
     }));
   }, [transactions]);

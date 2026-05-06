@@ -67,7 +67,7 @@ export default function SearchModalView({
                 <Typo size={14} fontWeight="700" color={Colors.dark.primary}>
                   {transaction.length}
                 </Typo>{" "}
-                resultados
+                {transaction.length > 1 ? "resultados" : "resultado"}
               </Typo>
             </View>
           )}
@@ -75,7 +75,7 @@ export default function SearchModalView({
           <TransitionList
             loading={loading}
             data={transaction}
-            emptyListMessage="Não encontramos nada com esse nome."
+            emptyListMessage="Não encontramos nada com esse critério de busca."
           />
         </ScrollView>
       </View>

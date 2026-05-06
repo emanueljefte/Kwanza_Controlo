@@ -7,6 +7,7 @@ import { WalletType } from "@/types";
 import { scale, verticalScale } from "@/utils/styling";
 import { Ionicons } from "@expo/vector-icons"; // Troquei para Ionicons por ser mais moderno
 import { router } from "expo-router";
+import { ArrowsLeftRightIcon } from "phosphor-react-native";
 import React from "react";
 import { FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
 
@@ -61,13 +62,28 @@ export default function WalletView({
               </Typo>
             </View>
 
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={styles.addButton}
-              onPress={() => router.push("/(modals)/wallet")}
-            >
-              <Ionicons name="add" color={"#fff"} size={scale(28)} />
-            </TouchableOpacity>
+            {/* Container para os botões de ação */}
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.actionButton, { backgroundColor: "#3b82f6" }]} // Azul para transferências
+                onPress={() => router.push("/(modals)/transfer")}
+              >
+                <ArrowsLeftRightIcon
+                  color={"#fff"}
+                  size={scale(22)}
+                  weight="bold"
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={[styles.actionButton, { backgroundColor: "#f97316" }]} // Laranja para adicionar
+                onPress={() => router.push("/(modals)/wallet")}
+              >
+                <Ionicons name="add" color={"#fff"} size={scale(28)} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {loading ? (
@@ -125,6 +141,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: verticalScale(20),
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: scale(10),
+  },
+  actionButton: {
+    height: scale(45),
+    width: scale(45),
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   addButton: {
     height: scale(45),

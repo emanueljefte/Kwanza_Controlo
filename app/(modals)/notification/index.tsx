@@ -14,15 +14,6 @@ import NotificationsModalView from "./_notificationModalView";
 export default function NotificationsModal() {
   const { user } = useAuth();
 
-  const params = useLocalSearchParams<{
-    id?: string;
-    title?: string;
-    body?: string;
-    frequency?: string;
-    schedule_date?: string;
-    schedule_time?: string;
-  }>();
-
   const [loading, setLoading] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     visible: false,
@@ -53,6 +44,18 @@ export default function NotificationsModal() {
     body: "",
     user: user?.uid,
   });
+
+  const params: {
+    user: string;
+    id: string;
+    title: string;
+    body: string;
+    frequency: string;
+    schedule_date: string;
+    schedule_time: string;
+    enabled: any;
+    marked_to_delete: string;
+  } = useLocalSearchParams();
 
   useEffect(() => {
     if (params.id) {
@@ -153,7 +156,6 @@ export default function NotificationsModal() {
     if (!params.id) return;
     setLoading(true);
     try {
-      // Assume-se que criaste uma função deleteNotification no teu service
       await deleteNotification(params.id, user?.uid as string);
       router.back();
     } catch (error) {

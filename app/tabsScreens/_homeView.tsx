@@ -35,7 +35,7 @@ export default function HomeView({
               {getGreeting()}, {getEmoji()}
             </Typo>
             <Typo size={26} fontWeight={"700"}>
-              {user?.name?.split(" ")[0]}
+              {user?.name?.split(" ")[0]} {user?.name?.split(" ")[1]}
             </Typo>
           </View>
 
